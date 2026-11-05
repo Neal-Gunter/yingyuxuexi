@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#8f2d22">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="英语词源">
+<title>英语词源 · BEC</title>
+<link rel="manifest" href="./manifest.webmanifest">
+<link rel="apple-touch-icon" href="./icons/icon-180.png">
+<link rel="icon" href="./icons/icon-192.png">
+<link rel="stylesheet" href="./app.css">
+</head>
+<body>
+<header class="top">
+  <a class="brand" href="#/">词源</a>
+  <p class="brand-note">BEC · 拉丁语 · 希腊语</p>
+  <form id="search-form" role="search">
+    <input id="q" type="search" placeholder="查单词或中文" autocomplete="off" enterkeyhint="search">
+  </form>
+</header>
+<main id="view"></main>
+<nav class="tabs">
+  <a href="#/" data-tab="words">词库</a>
+  <a href="#/roots" data-tab="roots">词根</a>
+  <a href="#/legends" data-tab="legends">传说</a>
+  <a href="#/lessons" data-tab="lessons">课文</a>
+</nav>
+<script src="./data.js"></script>
+<script src="./app.js"></script>
+</body>
+</html>
