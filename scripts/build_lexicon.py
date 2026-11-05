@@ -145,6 +145,8 @@ PHRASES = {
     "co-ordinate": "协调",
     "co-ordination": "协调",
     "network": "网络；人脉",
+    "p./pp.": "页",
+    "train": "火车；训练",
     "may": "可以；也许；五月",
     "will": "将；会；意愿",
     "mine": "我的；矿",
@@ -208,7 +210,9 @@ def parse_entry(text: str):
     word = re.sub(r"\s+", " ", word).strip()
     if not word or len(word) > 55 or len(word.split()) > 7:
         return None
-    if re.search(r"[?!£$]", word) or word.endswith("."):
+    if re.search(r"[?!£$]", word):
+        return None
+    if word.endswith(".") and " " in word:
         return None
     if not re.match(r"^[A-Za-z0-9]", word):
         return None
@@ -253,7 +257,12 @@ def extract_heads(pdf_path: Path):
             by_y[y].append((x, text))
         for y, items in by_y.items():
             items.sort()
-            for origin, limit in ((72.0, 300.0), (315.6, 560.0)):
+            origins = [72.0, 315.6]
+            for x, text in items:
+                if 324 <= x <= 346 and re.match(r"^[A-Za-z]", text) and not text.startswith("•"):
+                    origins.append(x)
+            for origin in origins:
+                limit = 300.0 if origin < 200 else 560.0
                 if not any(abs(x - origin) < 8 for x, _text in items):
                     continue
                 parts = [text for x, text in items if origin - 2 <= x < limit]
