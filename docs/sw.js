@@ -1,4 +1,4 @@
-const CACHE = "yingyuxuexi-v1";
+const CACHE = "yingyuxuexi-v2";
 const FILES = [
   "./",
   "./index.html",

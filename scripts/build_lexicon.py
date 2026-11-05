@@ -21,6 +21,7 @@ ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "content"))
 
 from curriculum import EXTRA, ETYM, GERMANIC, GLOSS, LEGENDS, LESSONS, ROOTS  # noqa: E402
+from scenes import SCENES  # noqa: E402
 
 PDF = Path(r"C:\Users\zanda\AppData\Local\Temp\yyx-build\bec-preliminary.pdf")
 ECDICT = Path(r"C:\Users\zanda\AppData\Local\Temp\yyx-build\ecdict.csv")
@@ -359,6 +360,162 @@ def load_ecdict(path: Path, wanted: set[str]):
     return found
 
 
+def short_zh(text: str) -> str:
+    piece = re.split(r"[；;，,]", text or "")[0].strip().replace("…", "")
+    return piece or "这个"
+
+
+def surface_word(word: str) -> str:
+    text = re.sub(r"\([^)]*\)", "", word)
+    text = text.split("/")[0].strip()
+    return re.sub(r"\s+", " ", text) or word
+
+
+def pos_kind(pos: str) -> str:
+    text = (pos or "").lower()
+    has_noun = bool(re.search(r"\bn\b", text))
+    if re.search(r"\bphr v\b|\bv\b", text) and not has_noun:
+        return "v"
+    if re.search(r"\badj\b", text) and not has_noun:
+        return "adj"
+    if re.search(r"\badv\b", text) and not has_noun and "adj" not in text:
+        return "adv"
+    if re.search(r"\b(prep|conj|pron|det|int|exclam|abbrev)\b", text) and not has_noun:
+        return "small"
+    return "n"
+
+
+def choose(word: str, salt: int, options: list[str]) -> str:
+    score = salt
+    for char in word.lower():
+        score = (score * 33 + ord(char)) % 1000003
+    return options[score % len(options)]
+
+
+def example_sentences(entry: dict) -> list[dict]:
+    word = surface_word(entry["w"])
+    gloss = short_zh(entry.get("zh") or "")
+    kind = pos_kind(entry.get("pos") or "")
+    if "." in word or len(word) <= 2 or kind == "small":
+        office = choose(word, 1, [
+            'Please do not delete the word "{w}" from the email.',
+            'The note says "{w}", and nobody knows why.',
+            'She wrote "{w}" at the top of the agenda.',
+        ]).format(w=word)
+        daily = choose(word, 2, [
+            'He texted one word: "{w}".',
+            'I heard "{w}" twice on the way home.',
+            'The sign still says "{w}".',
+        ]).format(w=word)
+        funny = choose(word, 3, [
+            'The meeting stopped when someone shouted "{w}!"',
+            'My cat stepped on the keyboard and produced "{w}".',
+            'The coffee machine displayed "{w}" and refused to explain.',
+        ]).format(w=word)
+        office_zh = f"请不要把邮件里的「{gloss}」删掉。"
+        daily_zh = f"他只发来一个意思：{gloss}。"
+        funny_zh = f"有人突然喊了一声，会议室停住了。那个意思是：{gloss}。"
+    elif kind == "v":
+        office = choose(word, 1, [
+            "Please {w} it before the client calls.",
+            "We need to {w} this before the meeting.",
+            "Can you {w} the file and send me a copy?",
+            "The team will {w} it after lunch.",
+        ]).format(w=word)
+        daily = choose(word, 2, [
+            "I will {w} it after dinner.",
+            "She asked me to {w} it quietly.",
+            "Don't {w} it on the bus.",
+            "He promised to {w} it tomorrow morning.",
+        ]).format(w=word)
+        funny = choose(word, 3, [
+            "He tried to {w} the coffee machine. The machine declined.",
+            "Please do not {w} the cat. The cat has a deadline.",
+            "I asked the printer to {w} it. The printer took the afternoon off.",
+            "She offered to {w} the budget. The budget looked nervous.",
+        ]).format(w=word)
+        office_zh = f"客户来电话之前，请先把这件事办了：{gloss}。"
+        daily_zh = f"晚饭后我再去处理：{gloss}。"
+        funny_zh = f"有人想拿咖啡机来{gloss}，咖啡机拒绝了。"
+    elif kind == "adj":
+        office = choose(word, 1, [
+            "The client says the plan is too {w}.",
+            "This report looks {w} on page two.",
+            "We need a less {w} solution before Friday.",
+            "Her email was short and {w}.",
+        ]).format(w=word)
+        daily = choose(word, 2, [
+            "The weather is {w}, so I am staying in.",
+            "This soup tastes {w}, and I still ate it.",
+            "He looked {w} after the long meeting.",
+            "The bus was late and the driver was {w}.",
+        ]).format(w=word)
+        funny = choose(word, 3, [
+            "My boss called the idea {w}. The idea looked proud.",
+            "The cat finds your slides {w} and went to sleep.",
+            "Even the printer thinks this font is {w}.",
+            "The cake was {w}. We still put it in the minutes.",
+        ]).format(w=word)
+        office_zh = f"客户觉得这个方案太{gloss}了。"
+        daily_zh = f"日常生活里，这件东西给人的感觉是{gloss}。"
+        funny_zh = f"老板说这个主意很{gloss}，主意本身看起来还挺得意。"
+    elif kind == "adv":
+        office = choose(word, 1, [
+            "Please reply {w} and copy the manager.",
+            "She explained the numbers {w}.",
+            "We should decide {w}, before the client arrives.",
+            "He read the contract {w}.",
+        ]).format(w=word)
+        daily = choose(word, 2, [
+            "She answered {w} and then laughed.",
+            "Walk {w}. The floor is wet.",
+            "He closed the door {w}.",
+            "I will call you {w}.",
+        ]).format(w=word)
+        funny = choose(word, 3, [
+            "The cat entered {w}, as if it owned the budget.",
+            "He apologised {w}, while still holding the invoice.",
+            "The lift doors opened {w}, and the meeting was inside.",
+            "She nodded {w}. The coffee did not.",
+        ]).format(w=word)
+        office_zh = f"请这样回复：{gloss}，并抄送经理。"
+        daily_zh = f"她是这样回答的：{gloss}。"
+        funny_zh = f"猫以一种「{gloss}」的方式走进来，好像预算是它的。"
+    else:
+        office = choose(word, 1, [
+            "Please send the {w} before Friday.",
+            "The {w} is in the shared folder.",
+            "We discussed the {w} in the morning meeting.",
+            "Can you check the {w} and reply today?",
+            "The client asked for the {w} again.",
+        ]).format(w=word)
+        daily = choose(word, 2, [
+            "I looked for the {w} and found it in my bag.",
+            "She mentioned the {w} on the way home.",
+            "Don't forget the {w} when you leave.",
+            "The {w} was on the kitchen table this morning.",
+            "He called me about the {w} after dinner.",
+        ]).format(w=word)
+        funny = choose(word, 3, [
+            "The {w} tried to join the meeting, and nobody stopped it.",
+            "I put the {w} in the fridge. It is still there, looking offended.",
+            "My boss blamed the {w}. The {w} refused to apologise.",
+            "The {w} arrived late, sat down, and asked for coffee.",
+            "The {w} has a deadline. The {w} is not worried.",
+        ]).format(w=word)
+        office_zh = f"请在周五前把{gloss}发来。"
+        daily_zh = f"我在包里找到了{gloss}。"
+        funny_zh = f"{gloss}想参加会议，居然没有人拦它。"
+    rows = [
+        {"k": "办公", "en": office, "zh": office_zh},
+        {"k": "日常", "en": daily, "zh": daily_zh},
+        {"k": "搞笑", "en": funny, "zh": funny_zh},
+    ]
+    if entry.get("ex"):
+        rows.insert(0, {"k": "商务", "en": entry["ex"], "zh": f"商务例句，关键词是{gloss}。"})
+    return rows[:4]
+
+
 def root_sentence(word: str, root: dict) -> str:
     return (
         f"{word} 可以放进「{root['title']}」这一族。"
@@ -525,6 +682,13 @@ def main():
         entry["rs"] = [root_id for root_id in entry["rs"] if root_id in root_by_id]
         if entry["lg"] and entry["lg"] not in legend_by_id:
             entry["lg"] = ""
+        entry["xs"] = example_sentences(entry)
+
+    known = {item["w"].lower() for item in words.values()}
+    scenes = []
+    for scene in SCENES:
+        kept = [word for word in scene["words"] if word.lower() in known]
+        scenes.append({**scene, "words": kept})
 
     ordered = sorted(words.values(), key=lambda item: item["w"].lower())
     counts = {
@@ -540,6 +704,7 @@ def main():
         "roots": len(ROOTS),
         "legendEntries": len(LEGENDS),
         "lessons": len(LESSONS),
+        "scenes": len(scenes),
     }
     missing = [item["w"] for item in ordered if item["zh"].startswith("（词表收录")]
     payload = {
@@ -552,6 +717,7 @@ def main():
         "roots": ROOTS,
         "legends": LEGENDS,
         "lessons": LESSONS,
+        "scenes": scenes,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     text = "window.YY = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n"
