@@ -223,6 +223,7 @@
     if (mode === "review") queue = dueWords();
     else if (mode === "wrong") queue = wrongWords();
     else if (mode === "new") queue = freshWords(15);
+    else if (mode === "picture") queue = words.filter((item) => item.pic);
     else queue = freshWords(12);
     if (!queue.length) queue = orderedStudyWords().slice(0, 12);
     session = { mode: mode, queue: queue, index: 0, revealed: false, picked: null };
@@ -258,6 +259,7 @@
       countRow("#/go/listen", "听音选义", "先听读音，再选中文", 12) +
       countRow("#/go/choice", "看义选词", "给中文，选出英文", 12) +
       countRow("#/go/cloze", "例句填空", "把句子里的词补上", 12) +
+      countRow("#/go/picture", "看图选词", "一组配了图的核心词", words.filter((item) => item.pic).length) +
       countRow("#/go/wrong", "错题再练", "答错和不认识的词会留在这里", counts.wrong) +
       "</div>";
   }
@@ -295,7 +297,7 @@
       return;
     }
     const place = (session.index + 1) + " / " + session.queue.length;
-    if (mode === "listen" || mode === "choice" || mode === "cloze") {
+    if (mode === "listen" || mode === "choice" || mode === "cloze" || mode === "picture") {
       renderQuiz(mode, item, place);
       return;
     }
@@ -332,6 +334,8 @@
     if (mode === "listen") {
       prompt = "<p>听读音，选出中文。</p>" + speakButton(item.w, "再听一次");
       if (!session.picked) speak(item.w);
+    } else if (mode === "picture") {
+      prompt = '<img class="pic" alt="" src="./' + esc(item.pic) + '"><p>这张图是哪个词？</p>';
     } else if (mode === "choice") {
       prompt = "<p>" + esc(item.zh) + "</p><p class=\"muted\">选出对应的英文。</p>";
     } else {

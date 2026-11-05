@@ -392,7 +392,97 @@ def choose(word: str, salt: int, options: list[str]) -> str:
     return options[score % len(options)]
 
 
+HAND_XS = {
+    "meeting": [
+        {"k": "办公", "en": "The meeting starts at ten. Please bring the agenda.", "zh": "会议十点开始。请把议程带上。"},
+        {"k": "日常", "en": "I remembered the meeting only when I was already on the bus.", "zh": "我已经上了公交，才想起还有会议。"},
+        {"k": "搞笑", "en": "The meeting started before anyone sat down. The cat took the first chair.", "zh": "人还没坐下，会议就开始了。猫占了第一把椅子。"},
+    ],
+    "invoice": [
+        {"k": "办公", "en": "Please send the invoice with the delivery note.", "zh": "请把发票和送货单一起发来。"},
+        {"k": "日常", "en": "I found last month's invoice in a kitchen drawer.", "zh": "我在厨房抽屉里找到了上个月的发票。"},
+        {"k": "搞笑", "en": "The invoice has been 'on its way' since Monday. So has my patience.", "zh": "发票从周一起就说在路上。我的耐心也是。"},
+    ],
+    "budget": [
+        {"k": "办公", "en": "The budget cannot cover another round of taxis.", "zh": "预算不够再报一轮出租车了。"},
+        {"k": "日常", "en": "We talked about the household budget after dinner.", "zh": "晚饭后我们谈了家里的开支预算。"},
+        {"k": "搞笑", "en": "Everyone nodded at the budget. Nobody had opened it.", "zh": "所有人都对预算点头。没有人打开过。"},
+    ],
+    "customer": [
+        {"k": "办公", "en": "The customer is still waiting for a clear answer.", "zh": "客户还在等一个清楚的答复。"},
+        {"k": "日常", "en": "A customer asked me the same question three times.", "zh": "一位顾客把同一个问题问了三遍。"},
+        {"k": "搞笑", "en": "The customer brought a cat and introduced it as a partner.", "zh": "客户带来一只猫，并介绍说这是合伙人。"},
+    ],
+    "deadline": [
+        {"k": "办公", "en": "The deadline is Friday at noon.", "zh": "截止日期是周五中午。"},
+        {"k": "日常", "en": "I remembered the deadline halfway home.", "zh": "走到半路我才想起截止日期。"},
+        {"k": "搞笑", "en": "The deadline did not move. My excuse did.", "zh": "截止日期没动。我的借口动了。"},
+    ],
+    "salary": [
+        {"k": "办公", "en": "Salary is paid on the last working day.", "zh": "工资在最后一个工作日发。"},
+        {"k": "日常", "en": "We checked the salary and then chose a cheaper dinner.", "zh": "我们看了工资，然后选了更便宜的晚饭。"},
+        {"k": "搞笑", "en": "The cat has no salary and still expects lunch.", "zh": "猫没有工资，仍然等着午饭。"},
+    ],
+    "contract": [
+        {"k": "办公", "en": "Please read the contract before you sign.", "zh": "签字前请先读合同。"},
+        {"k": "日常", "en": "The phone contract ends in March.", "zh": "手机合约三月到期。"},
+        {"k": "搞笑", "en": "We shook hands. The contract was still in the other room.", "zh": "我们已经握手了。合同还在另一个房间。"},
+    ],
+    "luggage": [
+        {"k": "办公", "en": "Please keep the samples in your hand luggage.", "zh": "请把样品放在手提行李里。"},
+        {"k": "日常", "en": "My luggage arrived one day after I did.", "zh": "行李比我晚到一天。"},
+        {"k": "搞笑", "en": "The suitcase went to the meeting. I went to the wrong carousel.", "zh": "箱子去开会了。我去了错误的行李转盘。"},
+    ],
+    "delivery": [
+        {"k": "办公", "en": "The delivery is due before noon.", "zh": "这批货中午之前要送到。"},
+        {"k": "日常", "en": "The dinner delivery arrived during the film.", "zh": "外卖在电影放到一半时到了。"},
+        {"k": "搞笑", "en": "Delivery said 'at the door'. The door disagreed.", "zh": "配送写着放在门口。门并不同意。"},
+    ],
+    "discount": [
+        {"k": "办公", "en": "We can offer a small discount on large orders.", "zh": "大额订单可以给一点折扣。"},
+        {"k": "日常", "en": "I bought the coat because of the discount, not the weather.", "zh": "我买这件外套是因为折扣，不是因为天气。"},
+        {"k": "搞笑", "en": "The discount was so small it needed a magnifying glass.", "zh": "折扣小到需要放大镜。"},
+    ],
+    "manager": [
+        {"k": "办公", "en": "Please ask the manager before you change the price.", "zh": "改价格之前请问一下经理。"},
+        {"k": "日常", "en": "The shop manager helped me find a smaller size.", "zh": "店经理帮我找了小一号。"},
+        {"k": "搞笑", "en": "The manager called a meeting. The cat was already there.", "zh": "经理召集会议。猫已经到了。"},
+    ],
+    "email": [
+        {"k": "办公", "en": "I sent the email, but I forgot the attachment.", "zh": "邮件发出去了，附件忘了。"},
+        {"k": "日常", "en": "Her email arrived while we were cooking.", "zh": "我们做饭的时候，她的邮件到了。"},
+        {"k": "搞笑", "en": "The email said 'urgent'. It was a picture of lunch.", "zh": "邮件标题是「紧急」。内容是午饭的照片。"},
+    ],
+    "coffee": [
+        {"k": "办公", "en": "The meeting can start when the coffee arrives.", "zh": "咖啡到了，会议就可以开始。"},
+        {"k": "日常", "en": "I drink one coffee on the way to work.", "zh": "我上班路上喝一杯咖啡。"},
+        {"k": "搞笑", "en": "The coffee was stronger than the decision.", "zh": "咖啡比那个决定更有劲。"},
+    ],
+    "flight": [
+        {"k": "办公", "en": "My flight lands at 9:40. I can be in the office by noon.", "zh": "我的航班 9:40 落地。中午能到办公室。"},
+        {"k": "日常", "en": "The flight was late, so we missed dinner.", "zh": "航班晚点了，晚饭没赶上。"},
+        {"k": "搞笑", "en": "The flight was on time. My shoes were not.", "zh": "航班准点。我的鞋不是。"},
+    ],
+    "hotel": [
+        {"k": "办公", "en": "The hotel is a short walk from the client.", "zh": "酒店离客户走路就到。"},
+        {"k": "日常", "en": "We liked the hotel because breakfast started early.", "zh": "我们喜欢这家酒店，因为早餐开得早。"},
+        {"k": "搞笑", "en": "The hotel gave me a quiet room next to a drum.", "zh": "酒店给了我一间安静的房，隔壁是一面鼓。"},
+    ],
+    "agenda": [
+        {"k": "办公", "en": "The agenda has three items and one apology.", "zh": "议程上有三项，外加一次道歉。"},
+        {"k": "日常", "en": "Our family agenda was: eat, walk, sleep.", "zh": "我们家的议程是：吃、走、睡。"},
+        {"k": "搞笑", "en": "Item one on the agenda was finding the agenda.", "zh": "议程第一项是把议程找出来。"},
+    ],
+}
+
+
 def example_sentences(entry: dict) -> list[dict]:
+    hand = HAND_XS.get(entry["w"].lower())
+    if hand:
+        rows = [dict(item) for item in hand]
+        if entry.get("ex"):
+            rows.insert(0, {"k": "商务", "en": entry["ex"], "zh": "这是这个词在商务语境里的一句。"})
+        return rows[:4]
     word = surface_word(entry["w"])
     gloss = short_zh(entry.get("zh") or "")
     kind = pos_kind(entry.get("pos") or "")
@@ -417,26 +507,26 @@ def example_sentences(entry: dict) -> list[dict]:
         funny_zh = f"有人突然喊了一声，会议室停住了。那个意思是：{gloss}。"
     elif kind == "v":
         office = choose(word, 1, [
-            "Please {w} it before the client calls.",
-            "We need to {w} this before the meeting.",
-            "Can you {w} the file and send me a copy?",
-            "The team will {w} it after lunch.",
+            "We still need to {w} before the client calls.",
+            "They agreed to {w} after the meeting.",
+            "It took all morning to {w}.",
+            "Someone has to {w} before Friday.",
         ]).format(w=word)
         daily = choose(word, 2, [
-            "I will {w} it after dinner.",
-            "She asked me to {w} it quietly.",
-            "Don't {w} it on the bus.",
-            "He promised to {w} it tomorrow morning.",
+            "I will {w} after dinner.",
+            "She asked me not to {w} on the bus.",
+            "He promised to {w} tomorrow morning.",
+            "We can {w} when we get home.",
         ]).format(w=word)
         funny = choose(word, 3, [
-            "He tried to {w} the coffee machine. The machine declined.",
-            "Please do not {w} the cat. The cat has a deadline.",
-            "I asked the printer to {w} it. The printer took the afternoon off.",
-            "She offered to {w} the budget. The budget looked nervous.",
+            "He stood up to {w}, then sat down and ordered coffee.",
+            "Nobody wanted to {w}, so the job stayed open.",
+            "I was ready to {w}. The printer was not.",
+            "They tried to {w} and ended up laughing.",
         ]).format(w=word)
-        office_zh = f"客户来电话之前，请先把这件事办了：{gloss}。"
-        daily_zh = f"晚饭后我再去处理：{gloss}。"
-        funny_zh = f"有人想拿咖啡机来{gloss}，咖啡机拒绝了。"
+        office_zh = f"客户来电话之前，这件事还得做：{gloss}。"
+        daily_zh = f"晚饭后再说这件事：{gloss}。"
+        funny_zh = f"大家本来要去{gloss}，结果先笑了。"
     elif kind == "adj":
         office = choose(word, 1, [
             "The client says the plan is too {w}.",
@@ -483,29 +573,29 @@ def example_sentences(entry: dict) -> list[dict]:
         funny_zh = f"猫以一种「{gloss}」的方式走进来，好像预算是它的。"
     else:
         office = choose(word, 1, [
-            "Please send the {w} before Friday.",
-            "The {w} is in the shared folder.",
-            "We discussed the {w} in the morning meeting.",
-            "Can you check the {w} and reply today?",
-            "The client asked for the {w} again.",
+            "We need to sort out the {w} today.",
+            "Who is looking after the {w}?",
+            "The {w} came up in this morning's meeting.",
+            "There is still no decision on the {w}.",
+            "I left a note about the {w}.",
         ]).format(w=word)
         daily = choose(word, 2, [
-            "I looked for the {w} and found it in my bag.",
-            "She mentioned the {w} on the way home.",
-            "Don't forget the {w} when you leave.",
-            "The {w} was on the kitchen table this morning.",
-            "He called me about the {w} after dinner.",
+            "I was still thinking about the {w} on the bus home.",
+            "She explained the {w} in ordinary words.",
+            "We talked about the {w} after dinner.",
+            "He called me about the {w} while I was cooking.",
+            "The {w} can wait until tomorrow.",
         ]).format(w=word)
         funny = choose(word, 3, [
-            "The {w} tried to join the meeting, and nobody stopped it.",
-            "I put the {w} in the fridge. It is still there, looking offended.",
-            "My boss blamed the {w}. The {w} refused to apologise.",
-            "The {w} arrived late, sat down, and asked for coffee.",
-            "The {w} has a deadline. The {w} is not worried.",
+            "Everyone avoided the {w}, so it stayed on the agenda all week.",
+            "I tried to forget the {w}. It was waiting in my inbox.",
+            "The {w} has been 'nearly finished' since Monday.",
+            "We blamed the {w}. The {w} did not attend the meeting.",
+            "The cat sat on the papers and guarded the {w}.",
         ]).format(w=word)
-        office_zh = f"请在周五前把{gloss}发来。"
-        daily_zh = f"我在包里找到了{gloss}。"
-        funny_zh = f"{gloss}想参加会议，居然没有人拦它。"
+        office_zh = f"今天得把{gloss}这件事理清楚。"
+        daily_zh = f"回家的路上我还在想{gloss}。"
+        funny_zh = f"大家都躲着{gloss}，所以它在议程上待了一整周。"
     rows = [
         {"k": "办公", "en": office, "zh": office_zh},
         {"k": "日常", "en": daily, "zh": daily_zh},
@@ -683,6 +773,13 @@ def main():
         if entry["lg"] and entry["lg"] not in legend_by_id:
             entry["lg"] = ""
         entry["xs"] = example_sentences(entry)
+        pic_name = surface_word(entry["w"]).lower().replace(" ", "-")
+        entry.pop("pic", None)
+        for ext in (".png", ".jpg"):
+            pic_path = ROOT / "docs" / "pics" / f"{pic_name}{ext}"
+            if pic_path.exists():
+                entry["pic"] = f"pics/{pic_name}{ext}"
+                break
 
     known = {item["w"].lower() for item in words.values()}
     scenes = []
