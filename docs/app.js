@@ -9,11 +9,15 @@
   const legends = data.legends;
   const lessons = data.lessons;
   const scenes = data.scenes || [];
+  const books = data.books || [];
+  const pairs = data.pairs || [];
   const byWord = new Map(words.map((item) => [item.w.toLowerCase(), item]));
   const byRoot = new Map(roots.map((item) => [item.id, item]));
   const byLegend = new Map(legends.map((item) => [item.id, item]));
   const byLesson = new Map(lessons.map((item) => [item.id, item]));
   const byScene = new Map(scenes.map((item) => [item.id, item]));
+  const byBook = new Map(books.map((item) => [item.id, item]));
+  const byPair = new Map(pairs.map((item) => [item.id, item]));
   const rootCount = new Map();
   words.forEach((item) => {
     (item.rs || []).forEach((id) => rootCount.set(id, (rootCount.get(id) || 0) + 1));
@@ -26,6 +30,7 @@
   const DAY = 86400000;
   const MINUTE = 60000;
   let voice = null;
+  let player = null;
   let session = null;
   let lastHash = "";
 
@@ -54,19 +59,30 @@
       || null;
   }
 
-  function speak(text) {
-    if (!window.speechSynthesis) {
-      view.insertAdjacentHTML("afterbegin", '<p class="empty">这台设备没有可用的英文语音。</p>');
-      return;
-    }
+  function speakSynth(text) {
+    if (!window.speechSynthesis) return null;
     const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "en-GB";
+    utterance.lang = "en-US";
     utterance.rate = 0.92;
     if (voice) utterance.voice = voice;
     speechSynthesis.cancel();
     speechSynthesis.resume();
     speechSynthesis.speak(utterance);
     return utterance;
+  }
+
+  function speak(text) {
+    const key = String(text || "").trim().toLowerCase();
+    const item = byWord.get(key);
+    if (item && item.audio) {
+      if (player) player.pause();
+      player = new Audio("./" + item.audio);
+      player.play().catch(() => speakSynth(text));
+      return;
+    }
+    if (!speakSynth(text)) {
+      view.insertAdjacentHTML("afterbegin", '<p class="empty">这台设备没有可用的英文语音，也没有这个词的离线读音。</p>');
+    }
   }
 
   function speakLines(lines) {
@@ -224,8 +240,16 @@
     else if (mode === "wrong") queue = wrongWords();
     else if (mode === "new") queue = freshWords(15);
     else if (mode === "picture") queue = words.filter((item) => item.pic);
+    else if (mode.indexOf("book:") === 0) {
+      const book = byBook.get(mode.slice(5));
+      const items = book ? book.words.map((name) => byWord.get(name.toLowerCase())).filter(Boolean) : [];
+      const store = loadStore();
+      queue = items.filter((item) => !cardOf(store, item.w)).concat(items.filter((item) => cardOf(store, item.w)));
+    }
+    else if (mode === "today") queue = dueWords().slice(0, 20).concat(freshWords(10));
+    else if (mode === "spell" || mode === "dictation") queue = freshWords(8).concat(wrongWords()).slice(0, 12);
     else queue = freshWords(12);
-    if (!queue.length) queue = orderedStudyWords().slice(0, 12);
+    if (!queue.length && mode !== "review" && mode !== "wrong") queue = orderedStudyWords().slice(0, 12);
     session = { mode: mode, queue: queue, index: 0, revealed: false, picked: null };
   }
 
@@ -240,13 +264,93 @@
       '</b><small>' + esc(note) + '</small></span><span class="num">' + num + "</span></a>";
   }
 
+  function todayKey() {
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, "0");
+    const date = String(now.getDate()).padStart(2, "0");
+    return now.getFullYear() + "-" + month + "-" + date;
+  }
+
+  function todayRecord() {
+    const store = loadStore();
+    store.days = store.days || {};
+    if (!store.days[todayKey()]) {
+      store.days[todayKey()] = { learned: 0, reviewed: 0, dueStart: dueWords().length };
+      saveStore(store);
+    }
+    return store.days[todayKey()];
+  }
+
+  function bumpDaily(kind) {
+    const store = loadStore();
+    store.days = store.days || {};
+    const row = store.days[todayKey()] || { learned: 0, reviewed: 0, dueStart: 0 };
+    row[kind] += 1;
+    store.days[todayKey()] = row;
+    saveStore(store);
+  }
+
+  function forecastDays() {
+    const store = loadStore();
+    const cards = Object.values(store.cards || {});
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    return [0, 1, 2, 3, 4, 5, 6].map((offset) => {
+      const from = start.getTime() + offset * DAY;
+      const to = from + DAY;
+      return cards.filter((card) => card.due >= from && card.due < to).length;
+    });
+  }
+
+  function bookItems(book) {
+    return book.words.map((name) => byWord.get(name.toLowerCase())).filter(Boolean);
+  }
+
+  function bookKnown(book) {
+    const store = loadStore();
+    return bookItems(book).filter((item) => {
+      const card = cardOf(store, item.w);
+      return card && (card.interval || 0) >= 7 && !card.wrong;
+    }).length;
+  }
+
+  function exportProgress() {
+    const blob = new Blob([JSON.stringify(loadStore(), null, 2)], { type: "application/json" });
+    const link = document.createElement("a");
+    link.href = URL.createObjectURL(blob);
+    link.download = "yingyuxuexi-progress.json";
+    link.click();
+  }
+
+  function importProgress(file) {
+    const reader = new FileReader();
+    reader.onload = () => {
+      try {
+        const incoming = JSON.parse(String(reader.result || ""));
+        const store = loadStore();
+        store.cards = Object.assign(store.cards || {}, incoming.cards || {});
+        store.days = Object.assign(store.days || {}, incoming.days || {});
+        saveStore(store);
+        studyHome();
+      } catch (error) {
+        view.insertAdjacentHTML("afterbegin", '<p class="empty">这个文件读不了。</p>');
+      }
+    };
+    reader.readAsText(file);
+  }
+
   function studyHome() {
     setTab("study");
     const counts = progressCounts();
     const total = data.meta.counts;
+    const today = todayRecord();
+    const reviewGoal = today.dueStart || 0;
+    const forecast = forecastDays();
     view.innerHTML =
       '<section class="hero"><p class="kicker">记忆</p><h1>今天学一点</h1>' +
-      '<p class="counts">词库 ' + total.words + " · 已掌握 " + counts.known + " · 错题 " + counts.wrong + "</p>" +
+      '<p class="counts">新词 ' + today.learned + "/10 · 复习 " + today.reviewed + "/" + reviewGoal +
+      " · 词库 " + total.words + " · 已掌握 " + counts.known + " · 错题 " + counts.wrong + "</p>" +
+      '<p class="counts">未来 7 天到期：' + forecast.join(" · ") + "</p>" +
       '<div class="stat-grid">' +
       '<a class="stat" href="#/go/new"><b>' + counts.fresh + '</b>未学</a>' +
       '<a class="stat" href="#/go/review"><b>' + counts.due + '</b>待复习</a>' +
@@ -254,6 +358,11 @@
       '<a class="stat" href="#/sort"><b>' + counts.known + '</b>已掌握</a>' +
       "</div></section>" +
       '<div class="list">' +
+      countRow("#/go/today", "今日任务", "10 个新词，外加最多 20 个到期复习", today.learned + "/" + 10) +
+      countRow("#/books", "词书", "会议、钱、旅行、人事", books.length) +
+      countRow("#/pairs", "易混词", "来源不同、样子相近的一对", pairs.length) +
+      countRow("#/go/spell", "看义拼写", "看中文，把英文打出来", 12) +
+      countRow("#/go/dictation", "听写", "先听读音，再拼写", 12) +
       countRow("#/go/new", "学习新词", "一次 15 个，先初级、先有词源的", counts.fresh) +
       countRow("#/go/review", "复习到期", "按记得住的程度拉长间隔", counts.due) +
       countRow("#/go/listen", "听音选义", "先听读音，再选中文", 12) +
@@ -261,15 +370,24 @@
       countRow("#/go/cloze", "例句填空", "把句子里的词补上", 12) +
       countRow("#/go/picture", "看图选词", "一组配了图的核心词", words.filter((item) => item.pic).length) +
       countRow("#/go/wrong", "错题再练", "答错和不认识的词会留在这里", counts.wrong) +
-      "</div>";
+      "</div>" +
+      '<div class="row"><button class="speak" type="button" id="export-btn">导出进度</button>' +
+      '<label class="speak">导入进度<input id="import-file" type="file" accept="application/json" hidden></label></div>';
+    document.getElementById("export-btn").onclick = exportProgress;
+    document.getElementById("import-file").onchange = (event) => {
+      const file = event.target.files && event.target.files[0];
+      if (file) importProgress(file);
+    };
   }
 
   function applyGrade(item, grade) {
     const store = loadStore();
     const key = item.w.toLowerCase();
     const card = store.cards[key] || { ease: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, wrong: false };
+    const wasNew = !card.reps && !card.lapses;
     store.cards[key] = gradeCard(card, grade);
     saveStore(store);
+    if (session.mode === "today") bumpDaily(wasNew ? "learned" : "reviewed");
     session.index += 1;
     session.revealed = false;
     session.picked = null;
@@ -281,6 +399,50 @@
       '<div class="line"><div><p class="who">' + esc(row.k) + "</p><p>" + esc(row.en) +
       "</p><p class=\"muted\">" + esc(row.zh) + "</p></div>" + speakButton(row.en, "读") + "</div>"
     ).join("");
+  }
+
+  function acceptedSpell(item, typed) {
+    const answer = String(typed || "").trim().toLowerCase();
+    const forms = [item.w.toLowerCase()];
+    const plain = item.w.toLowerCase().replace(/\([^)]*\)/g, "").split("/")[0].trim();
+    if (plain) forms.push(plain);
+    return forms.indexOf(answer) >= 0;
+  }
+
+  function renderSpell(mode, item, place) {
+    if (mode === "dictation" && !session.heard) {
+      session.heard = true;
+      speak(item.w);
+    }
+    view.innerHTML =
+      '<a class="back" href="#/">返回学习</a>' +
+      '<article class="detail"><p class="kicker">' + esc(place) + "</p>" +
+      (mode === "dictation"
+        ? "<p>听读音，拼出单词。</p>" + speakButton(item.w, "再听一次")
+        : "<p>" + esc(item.zh) + "</p><p class=\"muted\">拼出英文。</p>") +
+      '<input id="spell" type="text" autocomplete="off" autocapitalize="off" placeholder="英文">' +
+      '<button class="primary" type="button" id="check-spell">检查</button>' +
+      (session.picked ? '<p>' + (session.picked === "ok" ? "对了。" : "是 " + esc(item.w)) + '</p><button class="primary" type="button" id="next">下一题</button>' : "") +
+      "</article>";
+    const input = document.getElementById("spell");
+    if (input) input.focus();
+    const check = document.getElementById("check-spell");
+    if (check) check.onclick = () => {
+      if (session.picked) return;
+      if (acceptedSpell(item, input.value)) session.picked = "ok";
+      else {
+        session.picked = "bad";
+        markWrong(item.w);
+      }
+      renderGo(mode);
+    };
+    const next = document.getElementById("next");
+    if (next) next.onclick = () => {
+      session.index += 1;
+      session.picked = null;
+      session.heard = false;
+      renderGo(mode);
+    };
   }
 
   function renderGo(mode) {
@@ -297,6 +459,10 @@
       return;
     }
     const place = (session.index + 1) + " / " + session.queue.length;
+    if (mode === "spell" || mode === "dictation") {
+      renderSpell(mode, item, place);
+      return;
+    }
     if (mode === "listen" || mode === "choice" || mode === "cloze" || mode === "picture") {
       renderQuiz(mode, item, place);
       return;
@@ -404,6 +570,54 @@
     document.getElementById("play-all").onclick = () => speakLines(scene.lines);
   }
 
+  function bookList() {
+    setTab("study");
+    view.innerHTML =
+      '<a class="back" href="#/">返回学习</a>' +
+      '<section class="hero"><p class="kicker">词书 · ' + books.length + ' 本</p><h1>按场景学</h1>' +
+      "<p>数字是已掌握 / 这一本的词数。掌握指间隔已经到 7 天。</p></section>" +
+      '<div class="list">' + books.map((book) =>
+        countRow("#/book/" + book.id, book.title, book.blurb, bookKnown(book) + "/" + bookItems(book).length)
+      ).join("") + "</div>";
+  }
+
+  function bookDetail(id) {
+    setTab("study");
+    const book = byBook.get(id);
+    if (!book) return;
+    const items = bookItems(book);
+    view.innerHTML =
+      '<a class="back" href="#/books">全部词书</a>' +
+      '<article class="detail"><p class="kicker">' + bookKnown(book) + " / " + items.length + " 已掌握</p>" +
+      "<h1>" + esc(book.title) + "</h1><p>" + esc(book.blurb) + "</p>" +
+      '<a class="primary" href="#/go/book/' + book.id + '">学习这一本</a>' +
+      '<div class="list">' + items.map(renderWordLink).join("") + "</div></article>";
+  }
+
+  function pairList() {
+    setTab("study");
+    view.innerHTML =
+      '<a class="back" href="#/">返回学习</a>' +
+      '<section class="hero"><p class="kicker">易混 · ' + pairs.length + ' 对</p><h1>样子近，来源不同</h1></section>' +
+      '<div class="list">' + pairs.map((pair) =>
+        countRow("#/pair/" + pair.id, pair.title, "点开看两条来路", 2)
+      ).join("") + "</div>";
+  }
+
+  function pairDetail(id) {
+    setTab("study");
+    const pair = byPair.get(id);
+    if (!pair) return;
+    const left = byWord.get(pair.left.toLowerCase());
+    const right = byWord.get(pair.right.toLowerCase());
+    view.innerHTML =
+      '<a class="back" href="#/pairs">全部易混词</a>' +
+      '<article class="detail"><h1>' + esc(pair.title) + "</h1><p>" + esc(pair.note) + "</p>" +
+      (left ? '<div class="line"><div><p class="who">' + esc(left.w) + "</p><p>" + esc(left.zh) + "</p><p>" + esc(left.et) + "</p></div>" + speakButton(left.w, "读") + "</div>" : "") +
+      (right ? '<div class="line"><div><p class="who">' + esc(right.w) + "</p><p>" + esc(right.zh) + "</p><p>" + esc(right.et) + "</p></div>" + speakButton(right.w, "读") + "</div>" : "") +
+      "</article>";
+  }
+
   function sortHome() {
     setTab("sort");
     const total = data.meta.counts;
@@ -427,6 +641,10 @@
       "</div><h2>词源</h2><div class=\"list\">" + kinds +
       "</div><h2>场景</h2><div class=\"list\">" +
       scenes.map((scene) => countRow("#/scene/" + scene.id, scene.title, scene.tone, scene.words.length)).join("") +
+      "</div><h2>词书</h2><div class=\"list\">" +
+      books.map((book) => countRow("#/book/" + book.id, book.title, book.blurb, bookKnown(book) + "/" + bookItems(book).length)).join("") +
+      "</div><h2>易混</h2><div class=\"list\">" +
+      pairs.map((pair) => countRow("#/pair/" + pair.id, pair.title, "两条来路", 2)).join("") +
       "</div><h2>别的入口</h2><div class=\"list\">" +
       countRow("#/roots", "词根", "拉丁语和希腊语的共性", roots.length) +
       countRow("#/legends", "历史与传说", "神、钱币和具体的物", legends.length) +
@@ -622,8 +840,8 @@
       "<p>初级词头参考剑桥英语公开发布的 Business Preliminary 词表。中级 " + counts.V +
       " 个、高级 " + counts.H + " 个按考试主题补充。释义来自 MIT 许可的 ECDICT，商务多义词另作了改写。</p>" +
       "<p>每个词有办公、日常、搞笑三类例句，用来把词放进句子。八个情景对话是写成的短剧，可以整段朗读。词源仍然只在有把握时写明来源。</p>" +
-      "<p>记忆用本地间隔重复：不认识会进入错题，认识以后间隔从 1 天拉长。进度只存在这台设备的浏览器里。</p>" +
-      "<p>朗读使用设备自己的英文语音。安卓安装包在仓库的 release 目录。苹果手机把网页添加到主屏幕即可使用；签名的 App Store 包需要 Mac。</p></article>";
+      "<p>记忆用本地间隔重复。今日任务是 10 个新词加上到期复习。进度可以导出成一个 json 文件，再导入到另一台设备。核心词有离线读音，句子仍用设备自己的英文语音。</p>" +
+      "<p>安卓安装包在仓库的 release 目录。苹果手机把网页添加到主屏幕即可使用；签名的 App Store 包需要 Mac。</p></article>";
   }
 
   function route() {
@@ -633,7 +851,12 @@
     const parts = hash.replace(/^#\/?/, "").split("/").filter(Boolean);
     const head = parts[0] || "";
     if (!head) return studyHome();
+    if (head === "go" && parts[1] === "book" && parts[2]) return renderGo("book:" + parts[2]);
     if (head === "go" && parts[1]) return renderGo(parts[1]);
+    if (head === "books") return bookList();
+    if (head === "book" && parts[1]) return bookDetail(parts[1]);
+    if (head === "pairs") return pairList();
+    if (head === "pair" && parts[1]) return pairDetail(parts[1]);
     if (head === "scenes") return sceneList();
     if (head === "scene" && parts[1]) return sceneDetail(parts[1]);
     if (head === "sort") return sortHome();

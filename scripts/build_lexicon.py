@@ -22,6 +22,7 @@ sys.path.insert(0, str(ROOT / "content"))
 
 from curriculum import EXTRA, ETYM, GERMANIC, GLOSS, LEGENDS, LESSONS, ROOTS  # noqa: E402
 from scenes import SCENES  # noqa: E402
+from books import BOOKS, PAIRS  # noqa: E402
 
 PDF = Path(r"C:\Users\zanda\AppData\Local\Temp\yyx-build\bec-preliminary.pdf")
 ECDICT = Path(r"C:\Users\zanda\AppData\Local\Temp\yyx-build\ecdict.csv")
@@ -780,8 +781,29 @@ def main():
             if pic_path.exists():
                 entry["pic"] = f"pics/{pic_name}{ext}"
                 break
+        audio_path = ROOT / "docs" / "audio" / f"{pic_name}.mp3"
+        if audio_path.exists():
+            entry["audio"] = f"audio/{pic_name}.mp3"
+        else:
+            entry.pop("audio", None)
 
     known = {item["w"].lower() for item in words.values()}
+
+    def keep_words(names):
+        kept = []
+        for name in names:
+            if name.lower() in known and name not in kept:
+                kept.append(name)
+        return kept
+
+    books = []
+    for book in BOOKS:
+        books.append({**book, "words": keep_words(book["words"])})
+    pairs = []
+    for pair in PAIRS:
+        if pair["left"].lower() in known and pair["right"].lower() in known:
+            pairs.append(pair)
+
     scenes = []
     for scene in SCENES:
         kept = [word for word in scene["words"] if word.lower() in known]
@@ -802,6 +824,8 @@ def main():
         "legendEntries": len(LEGENDS),
         "lessons": len(LESSONS),
         "scenes": len(scenes),
+        "books": len(books),
+        "pairs": len(pairs),
     }
     missing = [item["w"] for item in ordered if item["zh"].startswith("（词表收录")]
     payload = {
@@ -815,6 +839,8 @@ def main():
         "legends": LEGENDS,
         "lessons": LESSONS,
         "scenes": scenes,
+        "books": books,
+        "pairs": pairs,
     }
     OUT.parent.mkdir(parents=True, exist_ok=True)
     text = "window.YY = " + json.dumps(payload, ensure_ascii=False, separators=(",", ":")) + ";\n"
