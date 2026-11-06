@@ -200,6 +200,18 @@ th { color: var(--faded); font-weight: 600; }
   font-size: 13px;
 }
 .grades, .stat-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 12px; }
+.grades .grade { text-align: center; padding: 14px 6px; margin-top: 0; }
+.recall {
+  display: inline-block;
+  margin: 4px 0 8px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--chip);
+  border: 1px solid var(--line);
+  font-size: 14px;
+}
+.recall.g0, .recall.g1 { color: var(--cinnabar); }
+.recall.g2, .recall.g3 { color: var(--greek); }
 .stat-grid { grid-template-columns: repeat(2, 1fr); }
 .stat {
   display: block;

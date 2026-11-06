@@ -71,18 +71,24 @@
     return utterance;
   }
 
-  function speak(text) {
+  function noteNoVoice() {
+    if (view.querySelector(".no-voice")) return;
+    view.insertAdjacentHTML("afterbegin", '<p class="empty no-voice">这台设备没有可用的英文语音，也没有这个词的离线读音。</p>');
+  }
+
+  function speak(text, options) {
+    const quiet = options && options.quiet;
     const key = String(text || "").trim().toLowerCase();
     const item = byWord.get(key);
     if (item && item.audio) {
       if (player) player.pause();
       player = new Audio("./" + item.audio);
-      player.play().catch(() => speakSynth(text));
+      player.play().catch(() => {
+        if (!speakSynth(text) && !quiet) noteNoVoice();
+      });
       return;
     }
-    if (!speakSynth(text)) {
-      view.insertAdjacentHTML("afterbegin", '<p class="empty">这台设备没有可用的英文语音，也没有这个词的离线读音。</p>');
-    }
+    if (!speakSynth(text) && !quiet) noteNoVoice();
   }
 
   function speakLines(lines) {
@@ -250,7 +256,7 @@
     else if (mode === "spell" || mode === "dictation") queue = freshWords(8).concat(wrongWords()).slice(0, 12);
     else queue = freshWords(12);
     if (!queue.length && mode !== "review" && mode !== "wrong") queue = orderedStudyWords().slice(0, 12);
-    session = { mode: mode, queue: queue, index: 0, revealed: false, picked: null };
+    session = { mode: mode, queue: queue, index: 0, revealed: false, picked: null, graded: null, dueNote: "", spoken: false };
   }
 
   function setTab(name) {
@@ -358,13 +364,13 @@
       '<a class="stat" href="#/sort"><b>' + counts.known + '</b>已掌握</a>' +
       "</div></section>" +
       '<div class="list">' +
-      countRow("#/go/today", "今日任务", "10 个新词，外加最多 20 个到期复习", today.learned + "/" + 10) +
+      countRow("#/go/today", "今日任务", "先判断，再看释义、例句和词源", today.learned + "/" + 10) +
       countRow("#/books", "词书", "会议、钱、旅行、人事", books.length) +
       countRow("#/pairs", "易混词", "来源不同、样子相近的一对", pairs.length) +
       countRow("#/go/spell", "看义拼写", "看中文，把英文打出来", 12) +
       countRow("#/go/dictation", "听写", "先听读音，再拼写", 12) +
-      countRow("#/go/new", "学习新词", "一次 15 个，先初级、先有词源的", counts.fresh) +
-      countRow("#/go/review", "复习到期", "按记得住的程度拉长间隔", counts.due) +
+      countRow("#/go/new", "学习新词", "一次 15 个。先选认识或不认识，再看这个词", counts.fresh) +
+      countRow("#/go/review", "复习到期", "先判断，再展开释义和读音", counts.due) +
       countRow("#/go/listen", "听音选义", "先听读音，再选中文", 12) +
       countRow("#/go/choice", "看义选词", "给中文，选出英文", 12) +
       countRow("#/go/cloze", "例句填空", "把句子里的词补上", 12) +
@@ -380,7 +386,58 @@
     };
   }
 
+  const gradeName = { 0: "不认识", 1: "模糊", 2: "认识", 3: "简单" };
+
+  function duePhrase(card) {
+    const days = card.interval || 0;
+    if (days >= 1) return days + " 天后再见";
+    return "大约 10 分钟后再见";
+  }
+
+  function rootChips(item) {
+    return (item.rs || []).map((id) => {
+      const root = byRoot.get(id);
+      return root ? '<a class="chip lang-' + esc(root.lang) + '" href="#/root/' + id + '">' + esc(root.title) + "</a>" : "";
+    }).join("");
+  }
+
+  function detailBlock(item) {
+    const chips = rootChips(item);
+    return "<p>" + esc(item.zh) + "</p>" +
+      (item.pos ? '<p class="meta">' + esc(item.pos) + "</p>" : "") +
+      renderExamples(item) +
+      '<div class="etym ' + esc(item.ek) + '"><p class="label">词源</p><p>' + esc(item.et) + "</p></div>" +
+      (chips ? '<div class="row">' + chips + "</div>" : "");
+  }
+
+  function gradeButtons() {
+    return '<div class="grades">' +
+      '<button class="grade" type="button" data-grade="0">不认识</button>' +
+      '<button class="grade" type="button" data-grade="1">模糊</button>' +
+      '<button class="grade" type="button" data-grade="2">认识</button>' +
+      '<button class="grade" type="button" data-grade="3">简单</button></div>';
+  }
+
+  function speakAnswer(item) {
+    if (!session || session.spoken) return;
+    session.spoken = true;
+    speak(item.w, { quiet: true });
+  }
+
+  function nextCard() {
+    session.index += 1;
+    session.revealed = false;
+    session.picked = null;
+    session.graded = null;
+    session.dueNote = "";
+    session.spoken = false;
+    session.choices = null;
+    session.heard = false;
+    renderGo(session.mode);
+  }
+
   function applyGrade(item, grade) {
+    if (session.graded != null) return;
     const store = loadStore();
     const key = item.w.toLowerCase();
     const card = store.cards[key] || { ease: 2.5, interval: 0, reps: 0, lapses: 0, due: 0, wrong: false };
@@ -388,9 +445,9 @@
     store.cards[key] = gradeCard(card, grade);
     saveStore(store);
     if (session.mode === "today") bumpDaily(wasNew ? "learned" : "reviewed");
-    session.index += 1;
-    session.revealed = false;
-    session.picked = null;
+    session.graded = grade;
+    session.dueNote = duePhrase(card);
+    session.revealed = true;
     renderGo(session.mode);
   }
 
@@ -422,7 +479,10 @@
         : "<p>" + esc(item.zh) + "</p><p class=\"muted\">拼出英文。</p>") +
       '<input id="spell" type="text" autocomplete="off" autocapitalize="off" placeholder="英文">' +
       '<button class="primary" type="button" id="check-spell">检查</button>' +
-      (session.picked ? '<p>' + (session.picked === "ok" ? "对了。" : "是 " + esc(item.w)) + '</p><button class="primary" type="button" id="next">下一题</button>' : "") +
+      (session.picked
+        ? "<p>" + (session.picked === "ok" ? "对了。" : "是 " + esc(item.w)) + "</p>" + detailBlock(item) +
+          '<button class="primary" type="button" id="next">下一个</button>'
+        : "") +
       "</article>";
     const input = document.getElementById("spell");
     if (input) input.focus();
@@ -436,13 +496,9 @@
       }
       renderGo(mode);
     };
+    if (session.picked) speakAnswer(item);
     const next = document.getElementById("next");
-    if (next) next.onclick = () => {
-      session.index += 1;
-      session.picked = null;
-      session.heard = false;
-      renderGo(mode);
-    };
+    if (next) next.onclick = nextCard;
   }
 
   function renderGo(mode) {
@@ -467,26 +523,24 @@
       renderQuiz(mode, item, place);
       return;
     }
+    const answered = session.graded != null;
     view.innerHTML =
       '<a class="back" href="#/">返回学习</a>' +
       '<article class="detail"><p class="kicker">' + esc(place) + " · " + esc(levelName[item.lv] || "") + "</p>" +
       '<div class="head-row"><h1>' + esc(item.w) + "</h1>" + speakButton(item.w, "读单词") + "</div>" +
       '<p class="meta phonetic">' + esc(item.ph ? "/" + item.ph + "/" : "") + "</p>" +
-      (session.revealed
-        ? "<p>" + esc(item.zh) + "</p>" + renderExamples(item) +
-          '<div class="etym ' + esc(item.ek) + '"><p>' + esc(item.et) + "</p></div>" +
-          '<div class="grades">' +
-          '<button class="grade" type="button" data-grade="0">不认识</button>' +
-          '<button class="grade" type="button" data-grade="1">模糊</button>' +
-          '<button class="grade" type="button" data-grade="2">认识</button>' +
-          '<button class="grade" type="button" data-grade="3">简单</button></div>'
-        : '<button class="primary" type="button" id="show">看释义和例句</button>') +
+      (answered
+        ? '<p class="recall g' + session.graded + '">' + gradeName[session.graded] + " · " + esc(session.dueNote) + "</p>" +
+          detailBlock(item) +
+          '<button class="primary" type="button" id="next">下一个</button>'
+        : '<p class="muted">先选记得怎么样。选完再看释义、例句、词源，并读出这个词。</p>' + gradeButtons()) +
       "</article>";
-    const show = document.getElementById("show");
-    if (show) show.onclick = () => { session.revealed = true; renderGo(mode); };
     view.querySelectorAll("[data-grade]").forEach((button) => {
       button.onclick = () => applyGrade(item, Number(button.dataset.grade));
     });
+    if (answered) speakAnswer(item);
+    const next = document.getElementById("next");
+    if (next) next.onclick = nextCard;
   }
 
   function renderQuiz(mode, item, place) {
@@ -499,7 +553,6 @@
     let prompt = "";
     if (mode === "listen") {
       prompt = "<p>听读音，选出中文。</p>" + speakButton(item.w, "再听一次");
-      if (!session.picked) speak(item.w);
     } else if (mode === "picture") {
       prompt = '<img class="pic" alt="" src="./' + esc(item.pic) + '"><p>这张图是哪个词？</p>';
     } else if (mode === "choice") {
@@ -521,8 +574,10 @@
     view.innerHTML =
       '<a class="back" href="#/">返回学习</a><article class="detail"><p class="kicker">' + esc(place) +
       "</p>" + prompt + options +
-      (session.picked ? '<button class="primary" type="button" id="next">下一题</button>' : "") +
+      (session.picked ? detailBlock(item) + '<button class="primary" type="button" id="next">下一个</button>' : "") +
       "</article>";
+    if (mode === "listen" && !session.picked) speak(item.w, { quiet: true });
+    if (session.picked) speakAnswer(item);
     view.querySelectorAll("[data-pick]").forEach((button) => {
       button.onclick = () => {
         if (session.picked) return;
@@ -532,12 +587,7 @@
       };
     });
     const next = document.getElementById("next");
-    if (next) next.onclick = () => {
-      session.index += 1;
-      session.picked = null;
-      session.choices = null;
-      renderGo(mode);
-    };
+    if (next) next.onclick = nextCard;
   }
 
   function sceneList() {
