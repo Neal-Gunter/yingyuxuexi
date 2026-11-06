@@ -86,3 +86,7 @@ OPEN_ETYM = {
     "withdraw": "withdraw 是 with 加上 draw，都是日耳曼词。把东西抽回去。",
     "worried": "worried 来自 worry。worry 是古英语 wyrgan，原意是掐住脖子。",
 }
+
+from etym_open_more import OPEN_ETYM_MORE, OPEN_KIND  # noqa: E402
+
+OPEN_ETYM.update(OPEN_ETYM_MORE)

@@ -686,6 +686,13 @@ HAND_XS = {
     ],
 }
 
+from hand_more import HAND_MORE  # noqa: E402
+
+_hand_overlap = set(HAND_MORE) & set(HAND_XS)
+if _hand_overlap:
+    raise SystemExit(f"HAND_MORE collides with HAND_XS: {sorted(_hand_overlap)}")
+HAND_XS.update(HAND_MORE)
+
 
 CALENDAR = {
     "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",

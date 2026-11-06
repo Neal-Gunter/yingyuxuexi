@@ -2452,10 +2452,12 @@ for key, text in list(MORE_ETYM.items()):
     if any(mark in text for mark in ("这里不猜测", "不写成已经核实", "没有完全定论", "不写成定论")):
         MORE_ETYM.pop(key, None)
 
-from etym_open import OPEN_ETYM  # noqa: E402
+from etym_open import OPEN_ETYM, OPEN_KIND  # noqa: E402
 
 for key, text in OPEN_ETYM.items():
     MORE_ETYM.setdefault(key.lower(), text)
+for key, kind in OPEN_KIND.items():
+    EXTRA_KIND.setdefault(key.lower(), kind)
 
 def _with_apostrophes(key: str) -> set[str]:
     straight = key.replace("’", "'").replace("‘", "'")
