@@ -26,6 +26,30 @@ BOOKS = [
         "blurb": "雇主、培训、部门、面试和合同",
         "words": ["employer", "employee", "staff", "salary", "training", "department", "interview", "candidate", "recruitment", "contract", "manager", "colleague", "director"],
     },
+    {
+        "id": "office",
+        "title": "办公",
+        "blurb": "桌子、电脑、电话、打印机和信",
+        "words": ["office", "desk", "computer", "phone", "printer", "email", "fax", "copy", "file", "calendar", "clock", "chair", "letter", "report"],
+    },
+    {
+        "id": "papers",
+        "title": "单据",
+        "blurb": "发票、收据、支票、表格和护照",
+        "words": ["invoice", "receipt", "bill", "cheque", "form", "contract", "ticket", "passport", "stamp", "signature", "envelope", "parcel"],
+    },
+    {
+        "id": "trip",
+        "title": "出行",
+        "blurb": "航班、火车、出租车、酒店和早餐",
+        "words": ["flight", "train", "taxi", "bus", "car", "hotel", "passport", "ticket", "luggage", "breakfast", "restaurant", "menu"],
+    },
+    {
+        "id": "trade",
+        "title": "买卖",
+        "blurb": "顾客、商店、产品、折扣和现金",
+        "words": ["customer", "shop", "product", "discount", "order", "delivery", "cash", "money", "receipt", "bill", "price", "supplier"],
+    },
 ]
 
 PAIRS = [
@@ -84,5 +108,47 @@ PAIRS = [
         "left": "wholesale",
         "right": "retail",
         "note": "批发和零售。wholesale 是日耳曼词 whole「整」加上 sale「卖」。retail 来自古法语「切成小块」，是一小份一小份地卖。",
+    },
+    {
+        "id": "borrow-lend",
+        "title": "borrow / lend",
+        "left": "borrow",
+        "right": "lend",
+        "note": "都是日耳曼词，方向相反。borrow 来自古英语 borgian，是把东西借进来。lend 来自古英语 lænan，是把东西借出去。",
+    },
+    {
+        "id": "say-tell",
+        "title": "say / tell",
+        "left": "say",
+        "right": "tell",
+        "note": "都是日耳曼词。say 来自古英语 secgan，着重说出来的那句话。tell 来自古英语 tellan，原是点数，后来是告诉某一个人。",
+    },
+    {
+        "id": "price-cost",
+        "title": "price / cost",
+        "left": "price",
+        "right": "cost",
+        "note": "都和钱有关，来路不同。price 来自古法语 pris，拉丁语 pretium「价钱」。cost 来自古法语，拉丁语 constare「停在某个数目上」，是花掉的成本。",
+    },
+    {
+        "id": "staff-stuff",
+        "title": "staff / stuff",
+        "left": "staff",
+        "right": "stuff",
+        "note": "只差一个字母。staff 来自古英语 stæf「杆」，后来是一班人。stuff 来自古法语 estoffe，是材料、东西。",
+    },
+    {
+        "id": "personal-personnel",
+        "title": "personal / personnel",
+        "left": "personal",
+        "right": "personnel",
+        "note": "同一条拉丁语 persona「面具、人」。personal 是私人的。personnel 经法语表示一批人员。",
+    },
+    {
+        "id": "affect-effect",
+        "title": "affect / effect",
+        "left": "affect",
+        "right": "effect",
+        "note": "都来自拉丁语 facere「做」。affect 是 ad + facere，对某事发生作用。effect 是 ex + facere，做出来的结果。",
     },
 ]

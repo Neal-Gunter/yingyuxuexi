@@ -35,6 +35,7 @@ from curriculum import (  # noqa: E402
 )
 from scenes import SCENES  # noqa: E402
 from books import BOOKS, PAIRS  # noqa: E402
+from phonetics_extra import PHONETICS  # noqa: E402
 
 PDF = Path(r"C:\Users\zanda\AppData\Local\Temp\yyx-build\bec-preliminary.pdf")
 ECDICT = Path(r"C:\Users\zanda\AppData\Local\Temp\yyx-build\ecdict.csv")
@@ -513,6 +514,21 @@ HAND_XS = {
         {"k": "日常", "en": "We checked the salary and then chose a cheaper dinner.", "zh": "我们看了工资，然后选了更便宜的晚饭。"},
         {"k": "搞笑", "en": "The cat has no salary and still expects lunch.", "zh": "猫没有工资，仍然等着午饭。"},
     ],
+    "according to": [
+        {"k": "办公", "en": "According to the email, the meeting is at ten.", "zh": "根据这封邮件，会议在十点。"},
+        {"k": "日常", "en": "According to the forecast, it will rain.", "zh": "根据预报，会下雨。"},
+        {"k": "搞笑", "en": "According to the cat, the meeting is cancelled.", "zh": "根据猫的说法，会议取消了。"},
+    ],
+    "a.m.": [
+        {"k": "办公", "en": "The meeting is at nine a.m.", "zh": "会议在上午九点。"},
+        {"k": "日常", "en": "I leave home at seven a.m.", "zh": "我上午七点出门。"},
+        {"k": "搞笑", "en": "The cat called a meeting for five a.m.", "zh": "猫把会议定在上午五点。"},
+    ],
+    "because of": [
+        {"k": "办公", "en": "The flight is late because of the weather.", "zh": "航班因天气晚点了。"},
+        {"k": "日常", "en": "We stayed in because of the rain.", "zh": "因为下雨，我们待在家里。"},
+        {"k": "搞笑", "en": "The meeting ended early because of the cat.", "zh": "因为那只猫，会议提前结束了。"},
+    ],
     "contract": [
         {"k": "办公", "en": "Please read the contract before you sign.", "zh": "签字前请先读合同。"},
         {"k": "日常", "en": "The phone contract ends in March.", "zh": "手机合约三月到期。"},
@@ -671,9 +687,25 @@ HAND_XS = {
 }
 
 
+CALENDAR = {
+    "monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday",
+    "january", "february", "march", "april", "may", "june", "july", "august",
+    "september", "october", "november", "december",
+}
+
+
+def noun_phrase(word: str) -> tuple[str, str]:
+    phrase = word if word.lower() in CALENDAR else "the " + word
+    titled = phrase[:1].upper() + phrase[1:] if phrase else phrase
+    return phrase, titled
+
+
 def fill_pair(english: str, chinese: str, word: str, gloss: str, verb: str) -> dict:
+    phrase, titled = noun_phrase(word)
     en = (
-        english.replace("{w}", word)
+        english.replace("{n}", phrase)
+        .replace("{N}", titled)
+        .replace("{w}", word)
         .replace("{v}", verb)
         .replace("{W}", (word[:1].upper() + word[1:]) if word else word)
     )
@@ -715,37 +747,53 @@ def example_sentences(entry: dict) -> list[dict]:
             ("My cat walked across the keyboard and left {w}.", "猫从键盘上走过，留下了{g}。"),
             ("Everyone looked at {w} on the screen, then at the cat.", "大家都看着屏幕上的{g}，然后看向猫。"),
         ]
-    elif kind == "v":
+    elif word.lower() in CALENDAR:
         office_pairs = [
-            ("We still need to {v} before Friday.", "周五之前我们还得{g}。"),
-            ("They asked me to {v} today.", "他们让我今天就{g}。"),
-            ("I will {v} after the meeting.", "会后我会{g}。"),
+            ("The meeting is on {W}.", "会议安排在{g}。"),
+            ("Please send the report on {W}.", "请在{g}把报告发来。"),
+            ("We can sign it on {W}.", "我们可以在{g}签字。"),
         ]
         daily_pairs = [
-            ("I can {v} when I get home.", "到家之后我可以{g}。"),
-            ("She will {v} tomorrow morning.", "她明天早上会{g}。"),
-            ("We can {v} after dinner.", "晚饭后我们可以{g}。"),
+            ("I will call you on {W}.", "我{g}给你打电话。"),
+            ("She is away on {W}.", "她{g}不在。"),
+            ("Let's have lunch on {W}.", "我们{g}吃午饭吧。"),
         ]
         funny_pairs = [
-            ("I was about to {v} when the phone rang.", "我正要{g}，电话响了。"),
-            ("Nobody wanted to {v}, so we had coffee.", "没人愿意{g}，于是我们喝了咖啡。"),
-            ("I was ready to {v}. The printer was not.", "我准备好{g}了。打印机没有。"),
+            ("The cat scheduled a meeting on {W}.", "猫把会议排在了{g}。"),
+            ("Everyone agreed on {W}. The cat did not.", "大家都同意{g}。猫没有。"),
+            ("I wrote {W} on the calendar. The cat crossed it out.", "我在日历上写了{g}。猫把它划掉了。"),
+        ]
+    elif kind == "v":
+        office_pairs = [
+            ("Please {v} before the client arrives.", "请在客户到之前{g}。"),
+            ("I have to {v} this afternoon.", "我今天下午得{g}。"),
+            ("We can {v} after the meeting.", "会后我们可以{g}。"),
+        ]
+        daily_pairs = [
+            ("I forgot to {v} before I left home.", "我出门前忘了{g}。"),
+            ("She will {v} when she gets home.", "她到家以后会{g}。"),
+            ("Can you {v} after dinner?", "晚饭后你能{g}吗？"),
+        ]
+        funny_pairs = [
+            ("I tried to {v}. The printer refused.", "我想{g}。打印机拒绝了。"),
+            ("Nobody would {v}, so the cat did.", "没人肯{g}，于是猫做了。"),
+            ("He promised to {v}, then opened the fridge.", "他答应{g}，然后打开了冰箱。"),
         ]
     elif kind == "adj":
         office_pairs = [
-            ("They called the plan {w}.", "他们说这个方案{p}。"),
-            ("I would not call this draft {w}.", "我不会说这份草稿{p}。"),
-            ("The email sounded {w}.", "那封邮件听上去{p}。"),
+            ("The client said the plan was {w}.", "客户说这个方案{p}。"),
+            ("This draft looks {w}.", "这份草稿看上去{p}。"),
+            ("I would not call the result {w}.", "我不会把这个结果说成{p}。"),
         ]
         daily_pairs = [
-            ("The soup was {w}, and I still ate it.", "汤{p}，我还是喝了。"),
-            ("He looked {w} after the long day.", "忙了一天，他看上去{p}。"),
-            ("It felt {w} on the way home.", "回家的路上，那种感觉{p}。"),
+            ("The soup tasted {w}.", "汤尝起来{p}。"),
+            ("He sounded {w} on the phone.", "他在电话里听上去{p}。"),
+            ("The weather felt {w} on the way home.", "回家路上觉得天气{p}。"),
         ]
         funny_pairs = [
-            ("My boss called it {w}. The cat stayed quiet.", "老板说它{p}。猫没吭声。"),
-            ("The cake was {w}. We still put it on the table.", "蛋糕{p}。我们还是把它放上了桌。"),
-            ("Even the sign looked {w}.", "连招牌看上去都{p}。"),
+            ("The sign called the cake {w}. The cat disagreed.", "招牌说蛋糕{p}。猫不同意。"),
+            ("Everyone called the idea {w}. Then they ordered coffee.", "大家都说这个主意{p}。然后他们点了咖啡。"),
+            ("It looked {w} until the cat sat on it.", "在猫坐上去之前，它看上去{p}。"),
         ]
     elif kind == "adv":
         office_pairs = [
@@ -765,19 +813,19 @@ def example_sentences(entry: dict) -> list[dict]:
         ]
     else:
         office_pairs = [
-            ("Can we talk about {w} before lunch?", "午饭前我们能谈谈{g}吗？"),
-            ("I left a note about {w} on your desk.", "我在你桌上留了张关于{g}的条子。"),
-            ("{W} is still on my list for today.", "{g}还在我今天的单子上。"),
+            ("Please send me {n} before lunch.", "请在午饭前把{g}发给我。"),
+            ("I put {n} on your desk.", "我把{g}放在你桌上了。"),
+            ("{N} arrived this morning.", "{g}今天早上到了。"),
         ]
         daily_pairs = [
-            ("I was still thinking about {w} on the way home.", "回家的路上我还在想{g}。"),
-            ("She mentioned {w} while we were eating.", "吃饭的时候她提起了{g}。"),
-            ("We can leave {w} until tomorrow.", "我们可以把{g}留到明天。"),
+            ("I forgot {n} at home.", "我把{g}忘在家里了。"),
+            ("We talked about {n} on the bus.", "我们在公交上谈了{g}。"),
+            ("She showed me {n} after dinner.", "晚饭后她给我看了{g}。"),
         ]
         funny_pairs = [
-            ("I tried to forget about {w}. My inbox would not let me.", "我想忘掉{g}。收件箱不让。"),
-            ("The cat sat on the only note about {w}.", "猫坐在唯一那张关于{g}的条子上。"),
-            ("Everyone nodded about {w}, then changed the subject.", "大家就{g}点了点头，然后换了话题。"),
+            ("The cat sat on {n}.", "猫坐在了{g}上面。"),
+            ("I looked for {n}. It was under the cat.", "我在找{g}。它在猫下面。"),
+            ("{N} can wait. The coffee cannot.", "{g}可以等。咖啡不能等。"),
         ]
     office = fill_pair(*choose(word, 1, office_pairs), word, gloss, verb)
     daily = fill_pair(*choose(word, 2, daily_pairs), word, gloss, verb)
@@ -913,6 +961,31 @@ def main():
             entry["zh"] = override
         if not entry["zh"]:
             entry["zh"] = "（词表收录；简明释义待补）"
+
+    by_lower = {entry["w"].lower(): entry for entry in words.values()}
+    for entry in words.values():
+        if not (entry.get("ph") or "").strip():
+            hit = PHONETICS.get(entry["w"].lower()) or PHONETICS.get(surface_word(entry["w"]).lower())
+            if hit:
+                entry["ph"] = hit
+    for entry in words.values():
+        if (entry.get("ph") or "").strip():
+            continue
+        parts = re.findall(r"[A-Za-z0-9][A-Za-z0-9.'-]*", surface_word(entry["w"]))
+        phs = []
+        for part in parts:
+            low = part.lower()
+            if low in PHONETICS:
+                phs.append(PHONETICS[low])
+                continue
+            owner = by_lower.get(low)
+            if owner and owner is not entry and (owner.get("ph") or "").strip():
+                phs.append(owner["ph"])
+                continue
+            phs = []
+            break
+        if phs:
+            entry["ph"] = " ".join(phs)
 
     germanic = {word.lower() for word in GERMANIC}
     more_germanic = {word.lower() for word in MORE_GERMANIC}
