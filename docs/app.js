@@ -12,6 +12,17 @@
   const books = data.books || [];
   const pairs = data.pairs || [];
   const byWord = new Map(words.map((item) => [item.w.toLowerCase(), item]));
+  const lineAudio = new Map();
+  function rememberLine(text, path) {
+    if (!text || !path) return;
+    lineAudio.set(String(text).trim().toLowerCase(), path);
+  }
+  words.forEach((item) => {
+    (item.xs || []).forEach((row) => rememberLine(row.en, row.au));
+  });
+  scenes.forEach((scene) => {
+    (scene.lines || []).forEach((line) => rememberLine(line.en, line.au));
+  });
   const byRoot = new Map(roots.map((item) => [item.id, item]));
   const byLegend = new Map(legends.map((item) => [item.id, item]));
   const byLesson = new Map(lessons.map((item) => [item.id, item]));
@@ -31,6 +42,7 @@
   const MINUTE = 60000;
   let voice = null;
   let player = null;
+  let speakToken = 0;
   let session = null;
   let lastHash = "";
 
@@ -76,15 +88,46 @@
     view.insertAdjacentHTML("afterbegin", '<p class="empty no-voice">这台设备没有可用的英文语音，也没有这个词的离线读音。</p>');
   }
 
-  function speak(text, options) {
-    const quiet = options && options.quiet;
+  function stopSpoken() {
+    speakToken += 1;
+    if (window.speechSynthesis) speechSynthesis.cancel();
+    if (player) {
+      player.onended = null;
+      player.pause();
+      player = null;
+    }
+    return speakToken;
+  }
+
+  function audioPathFor(text) {
     const key = String(text || "").trim().toLowerCase();
     const item = byWord.get(key);
-    if (item && item.audio) {
-      if (player) player.pause();
-      player = new Audio("./" + item.audio);
+    if (item && item.audio && key === item.w.toLowerCase()) return item.audio;
+    return lineAudio.get(key) || "";
+  }
+
+  function playFile(path, token, onend) {
+    if (player) {
+      player.onended = null;
+      player.pause();
+    }
+    player = new Audio("./" + path);
+    player.onended = () => {
+      if (token === speakToken && onend) onend();
+    };
+    player.play().catch(() => {
+      if (token === speakToken && onend) onend();
+    });
+  }
+
+  function speak(text, options) {
+    const quiet = options && options.quiet;
+    const token = stopSpoken();
+    const path = audioPathFor(text);
+    if (path) {
+      player = new Audio("./" + path);
       player.play().catch(() => {
-        if (!speakSynth(text) && !quiet) noteNoVoice();
+        if (token === speakToken && !speakSynth(text) && !quiet) noteNoVoice();
       });
       return;
     }
@@ -92,20 +135,32 @@
   }
 
   function speakLines(lines) {
-    if (!window.speechSynthesis || !lines.length) return;
-    speechSynthesis.cancel();
+    if (!lines.length) return;
+    const token = stopSpoken();
     let index = 0;
     const next = () => {
-      if (index >= lines.length) return;
-      const utterance = new SpeechSynthesisUtterance(lines[index].en);
-      utterance.lang = "en-GB";
+      if (token !== speakToken || index >= lines.length) return;
+      const line = lines[index];
+      index += 1;
+      const path = line.au || audioPathFor(line.en);
+      if (path) {
+        playFile(path, token, next);
+        return;
+      }
+      if (!window.speechSynthesis) return;
+      const utterance = new SpeechSynthesisUtterance(line.en);
+      utterance.lang = "en-US";
       utterance.rate = 0.92;
       if (voice) utterance.voice = voice;
-      const timer = setTimeout(step, Math.max(2500, lines[index].en.length * 80));
-      utterance.onend = () => { clearTimeout(timer); step(); };
+      const timer = setTimeout(() => {
+        if (token === speakToken) next();
+      }, Math.max(2500, String(line.en || "").length * 80));
+      utterance.onend = () => {
+        clearTimeout(timer);
+        if (token === speakToken) next();
+      };
       speechSynthesis.speak(utterance);
     };
-    const step = () => { index += 1; next(); };
     next();
   }
 
@@ -594,7 +649,7 @@
     setTab("scenes");
     view.innerHTML =
       '<section class="hero"><p class="kicker">情景</p><h1>把词放进对话</h1>' +
-      "<p>日常和搞笑两种口气。点进去可以整段朗读，也可以一句一句听。</p></section>" +
+      "<p>日常和搞笑两种口气。整段和每一句都有离线读音。</p></section>" +
       '<div class="list">' + scenes.map((scene) =>
         countRow("#/scene/" + scene.id, scene.title, scene.tone + " · " + scene.blurb, scene.words.length + " 词")
       ).join("") + "</div>";
@@ -890,7 +945,7 @@
       "<p>初级词头参考剑桥英语公开发布的 Business Preliminary 词表。中级 " + counts.V +
       " 个、高级 " + counts.H + " 个按考试主题补充。释义来自 MIT 许可的 ECDICT，商务多义词另作了改写。</p>" +
       "<p>每个词有办公、日常、搞笑三类例句，用来把词放进句子。八个情景对话是写成的短剧，可以整段朗读。词源仍然只在有把握时写明来源。</p>" +
-      "<p>记忆用本地间隔重复。今日任务是 10 个新词加上到期复习。进度可以导出成一个 json 文件，再导入到另一台设备。核心词有离线读音，句子仍用设备自己的英文语音。</p>" +
+      "<p>记忆用本地间隔重复。今日任务是 10 个新词加上到期复习。进度可以导出成一个 json 文件，再导入到另一台设备。单词、例句和八段情景对话都有离线读音。没有对应文件时，才用设备自己的英文语音。</p>" +
       "<p>安卓安装包在仓库的 release 目录。苹果手机把网页添加到主屏幕即可使用；签名的 App Store 包需要 Mac。</p></article>";
   }
 

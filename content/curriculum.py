@@ -1662,3 +1662,8 @@ EXTRA = [
     {"w": "rectangular", "lv": "P", "pos": "adj", "zh": "长方形的", "et": "rectangular 来自拉丁语 rectus「直的」和 angulus「角」。", "ex": "The table is rectangular."},
     {"w": "ugly", "lv": "P", "pos": "adj", "zh": "难看的", "et": "ugly 来自古诺斯语 uggligr，和恐惧有关，不是拉丁语。", "ex": "The prototype looks ugly, but it works."},
 ]
+
+# MORE_ETYM is applied only after a word has missed ETYM, legend notes and root
+# families. It is not merged into ETYM. MORE_GERMANIC stays separate too: the
+# generic Old English sentence would mislabel Old Norse and later Germanic words.
+from etym_extra import EXTRA_KIND, MORE_ETYM, MORE_GERMANIC  # noqa: E402

@@ -11,6 +11,7 @@ content/curriculum.py.
 from __future__ import annotations
 
 import csv
+import hashlib
 import json
 import re
 import sys
@@ -20,7 +21,18 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "content"))
 
-from curriculum import EXTRA, ETYM, GERMANIC, GLOSS, LEGENDS, LESSONS, ROOTS  # noqa: E402
+from curriculum import (  # noqa: E402
+    EXTRA,
+    ETYM,
+    EXTRA_KIND,
+    GERMANIC,
+    GLOSS,
+    LEGENDS,
+    LESSONS,
+    MORE_ETYM,
+    MORE_GERMANIC,
+    ROOTS,
+)
 from scenes import SCENES  # noqa: E402
 from books import BOOKS, PAIRS  # noqa: E402
 
@@ -375,6 +387,8 @@ def surface_word(word: str) -> str:
 def pos_kind(pos: str) -> str:
     text = (pos or "").lower()
     has_noun = bool(re.search(r"\bn\b", text))
+    if re.search(r"\b(int|exclam)\b", text) and not has_noun:
+        return "small"
     if re.search(r"\bphr v\b|\bv\b", text) and not has_noun:
         return "v"
     if re.search(r"\badj\b", text) and not has_noun:
@@ -391,6 +405,81 @@ def choose(word: str, salt: int, options: list[str]) -> str:
     for char in word.lower():
         score = (score * 33 + ord(char)) % 1000003
     return options[score % len(options)]
+
+
+def line_key(text: str) -> str:
+    return " ".join((text or "").split()).lower()
+
+
+def line_audio_rel(text: str) -> str:
+    digest = hashlib.sha1(line_key(text).encode("utf-8")).hexdigest()[:16]
+    return f"audio/lines/{digest}.mp3"
+
+
+# First ECDICT sense is sometimes a noun, or the wrong verb. The example uses a
+# sense that can actually be said as the translation of the English sentence.
+SENSE = {
+    "apply": "应用",
+    "communicate": "传达",
+    "cut down (on)": "削减",
+    "exclude": "排除",
+    "fill in": "填写",
+    "go for": "努力获取",
+    "impress": "留下印象",
+    "insure": "确保",
+    "keep": "保持",
+    "lead": "领导",
+    "look after": "照顾",
+    "pick up": "捡起",
+    "propose": "建议",
+    "protect": "保护",
+    "put on": "穿上",
+    "reclaim": "回收",
+    "refer": "提交",
+    "represent": "代表",
+    "seem": "似乎",
+    "take over": "接管",
+    "thank": "感谢",
+    "wear out": "用坏",
+    "wrap": "包起来",
+}
+
+
+def gloss_for_sentence(entry: dict) -> str:
+    forced = SENSE.get((entry.get("w") or "").lower())
+    if forced:
+        return forced
+    gloss = short_zh(entry.get("zh") or "").strip("「」 ")
+    return gloss or "这个"
+
+
+def as_predicate(gloss: str) -> str:
+    if gloss.endswith("的"):
+        return "是" + gloss
+    return "很" + gloss
+
+
+def spoken_verb(surface: str) -> str:
+    """Put a verb where a person can say it. Phrasal verbs keep a real object."""
+    bare = {
+        "break down", "break up", "come down", "get back", "get in", "get off",
+        "get on", "get up", "give in", "give up", "go down", "go off",
+        "go on", "go out", "hang up", "keep on", "look ahead", "look out",
+        "set off", "set out", "slow down", "stay behind", "turn around", "wake up",
+    }
+    parts = surface.split()
+    if surface in bare or len(parts) < 2:
+        return surface
+    if len(parts) >= 3:
+        return surface + " it"
+    verb, particle = parts
+    separable = {
+        "up", "down", "off", "on", "out", "away", "back", "in", "over",
+        "through", "forward", "aside", "together",
+    }
+    if particle in separable and verb not in {"go", "come", "sit", "stand", "stay", "be"}:
+        return f"{verb} it {particle}"
+    return surface + " it"
 
 
 HAND_XS = {
@@ -582,134 +671,122 @@ HAND_XS = {
 }
 
 
+def fill_pair(english: str, chinese: str, word: str, gloss: str, verb: str) -> dict:
+    en = (
+        english.replace("{w}", word)
+        .replace("{v}", verb)
+        .replace("{W}", (word[:1].upper() + word[1:]) if word else word)
+    )
+    if word.endswith(".") and en.endswith(word + "."):
+        en = en[:-1]
+    return {
+        "en": en,
+        "zh": chinese.replace("{g}", gloss).replace("{p}", as_predicate(gloss)),
+    }
+
+
 def example_sentences(entry: dict) -> list[dict]:
     hand = HAND_XS.get(entry["w"].lower())
     if hand:
-        rows = [dict(item) for item in hand]
-        if entry.get("ex"):
-            rows.insert(0, {"k": "商务", "en": entry["ex"], "zh": "这是这个词在商务语境里的一句。"})
-        return rows[:4]
+        return [dict(item) for item in hand][:4]
+    if entry["w"].lower() == "used to":
+        return [
+            {"k": "办公", "en": "We used to send the invoice on Friday.", "zh": "我们以前都在周五寄发票。"},
+            {"k": "日常", "en": "I used to walk home.", "zh": "我以前都是走回家。"},
+            {"k": "搞笑", "en": "The cat used to wait by the door. Now it waits on the keyboard.", "zh": "猫以前在门口等。现在它在键盘上等。"},
+        ]
     word = surface_word(entry["w"])
-    gloss = short_zh(entry.get("zh") or "")
+    gloss = gloss_for_sentence(entry)
     kind = pos_kind(entry.get("pos") or "")
-    if "." in word or len(word) <= 2 or kind == "small":
-        office = choose(word, 1, [
-            'Please do not delete the word "{w}" from the email.',
-            'The note says "{w}", and nobody knows why.',
-            'She wrote "{w}" at the top of the agenda.',
-        ]).format(w=word)
-        daily = choose(word, 2, [
-            'He texted one word: "{w}".',
-            'I heard "{w}" twice on the way home.',
-            'The sign still says "{w}".',
-        ]).format(w=word)
-        funny = choose(word, 3, [
-            'The meeting stopped when someone shouted "{w}!"',
-            'My cat stepped on the keyboard and produced "{w}".',
-            'The coffee machine displayed "{w}" and refused to explain.',
-        ]).format(w=word)
-        office_zh = f"请不要把邮件里的「{gloss}」删掉。"
-        daily_zh = f"他只发来一个意思：{gloss}。"
-        funny_zh = f"有人突然喊了一声，会议室停住了。那个意思是：{gloss}。"
+    verb = spoken_verb(word)
+    if "." in word or len(word) <= 1 or kind == "small":
+        office_pairs = [
+            ("The line begins with {w}.", "这一行以{g}开头。"),
+            ("Please don't leave {w} out.", "请不要把{g}漏掉。"),
+            ("She wrote {w} and then stopped.", "她写了{g}，然后停住了。"),
+        ]
+        daily_pairs = [
+            ("I heard someone say {w} on the bus.", "我在公交上听见有人说{g}。"),
+            ("The form still has {w} on it.", "表格上还留着{g}。"),
+            ("He texted me {w} and nothing else.", "他只给我发了{g}。"),
+        ]
+        funny_pairs = [
+            ("The coffee machine showed {w} and refused to explain.", "咖啡机显示了{g}，拒绝解释。"),
+            ("My cat walked across the keyboard and left {w}.", "猫从键盘上走过，留下了{g}。"),
+            ("Everyone looked at {w} on the screen, then at the cat.", "大家都看着屏幕上的{g}，然后看向猫。"),
+        ]
     elif kind == "v":
-        office = choose(word, 1, [
-            "We still need to {w} before the client calls.",
-            "They agreed to {w} after the meeting.",
-            "It took all morning to {w}.",
-            "Someone has to {w} before Friday.",
-        ]).format(w=word)
-        daily = choose(word, 2, [
-            "I will {w} after dinner.",
-            "She asked me not to {w} on the bus.",
-            "He promised to {w} tomorrow morning.",
-            "We can {w} when we get home.",
-        ]).format(w=word)
-        funny = choose(word, 3, [
-            "He stood up to {w}, then sat down and ordered coffee.",
-            "Nobody wanted to {w}, so the job stayed open.",
-            "I was ready to {w}. The printer was not.",
-            "They tried to {w} and ended up laughing.",
-        ]).format(w=word)
-        office_zh = f"客户来电话之前，这件事还得做：{gloss}。"
-        daily_zh = f"晚饭后再说这件事：{gloss}。"
-        funny_zh = f"大家本来要去{gloss}，结果先笑了。"
+        office_pairs = [
+            ("We still need to {v} before Friday.", "周五之前我们还得{g}。"),
+            ("They asked me to {v} today.", "他们让我今天就{g}。"),
+            ("I will {v} after the meeting.", "会后我会{g}。"),
+        ]
+        daily_pairs = [
+            ("I can {v} when I get home.", "到家之后我可以{g}。"),
+            ("She will {v} tomorrow morning.", "她明天早上会{g}。"),
+            ("We can {v} after dinner.", "晚饭后我们可以{g}。"),
+        ]
+        funny_pairs = [
+            ("I was about to {v} when the phone rang.", "我正要{g}，电话响了。"),
+            ("Nobody wanted to {v}, so we had coffee.", "没人愿意{g}，于是我们喝了咖啡。"),
+            ("I was ready to {v}. The printer was not.", "我准备好{g}了。打印机没有。"),
+        ]
     elif kind == "adj":
-        office = choose(word, 1, [
-            "The client says the plan is too {w}.",
-            "This report looks {w} on page two.",
-            "We need a less {w} solution before Friday.",
-            "Her email was short and {w}.",
-        ]).format(w=word)
-        daily = choose(word, 2, [
-            "The weather is {w}, so I am staying in.",
-            "This soup tastes {w}, and I still ate it.",
-            "He looked {w} after the long meeting.",
-            "The bus was late and the driver was {w}.",
-        ]).format(w=word)
-        funny = choose(word, 3, [
-            "My boss called the idea {w}. The idea looked proud.",
-            "The cat finds your slides {w} and went to sleep.",
-            "Even the printer thinks this font is {w}.",
-            "The cake was {w}. We still put it in the minutes.",
-        ]).format(w=word)
-        office_zh = f"客户觉得这个方案太{gloss}了。"
-        daily_zh = f"日常生活里，这件东西给人的感觉是{gloss}。"
-        funny_zh = f"老板说这个主意很{gloss}，主意本身看起来还挺得意。"
+        office_pairs = [
+            ("They called the plan {w}.", "他们说这个方案{p}。"),
+            ("I would not call this draft {w}.", "我不会说这份草稿{p}。"),
+            ("The email sounded {w}.", "那封邮件听上去{p}。"),
+        ]
+        daily_pairs = [
+            ("The soup was {w}, and I still ate it.", "汤{p}，我还是喝了。"),
+            ("He looked {w} after the long day.", "忙了一天，他看上去{p}。"),
+            ("It felt {w} on the way home.", "回家的路上，那种感觉{p}。"),
+        ]
+        funny_pairs = [
+            ("My boss called it {w}. The cat stayed quiet.", "老板说它{p}。猫没吭声。"),
+            ("The cake was {w}. We still put it on the table.", "蛋糕{p}。我们还是把它放上了桌。"),
+            ("Even the sign looked {w}.", "连招牌看上去都{p}。"),
+        ]
     elif kind == "adv":
-        office = choose(word, 1, [
-            "Please reply {w} and copy the manager.",
-            "She explained the numbers {w}.",
-            "We should decide {w}, before the client arrives.",
-            "He read the contract {w}.",
-        ]).format(w=word)
-        daily = choose(word, 2, [
-            "She answered {w} and then laughed.",
-            "Walk {w}. The floor is wet.",
-            "He closed the door {w}.",
-            "I will call you {w}.",
-        ]).format(w=word)
-        funny = choose(word, 3, [
-            "The cat entered {w}, as if it owned the budget.",
-            "He apologised {w}, while still holding the invoice.",
-            "The lift doors opened {w}, and the meeting was inside.",
-            "She nodded {w}. The coffee did not.",
-        ]).format(w=word)
-        office_zh = f"请这样回复：{gloss}，并抄送经理。"
-        daily_zh = f"她是这样回答的：{gloss}。"
-        funny_zh = f"猫以一种「{gloss}」的方式走进来，好像预算是它的。"
+        office_pairs = [
+            ("Could you say that {w}?", "你能{g}说这句话吗？"),
+            ("Please read the numbers {w}.", "请{g}把数字读一下。"),
+            ("She explained it {w}.", "她{g}作了解释。"),
+        ]
+        daily_pairs = [
+            ("She answered {w}, then smiled.", "她{g}回答，然后笑了。"),
+            ("I will call you {w}.", "我会{g}给你打电话。"),
+            ("He closed the door {w}.", "他{g}关上了门。"),
+        ]
+        funny_pairs = [
+            ("The cat walked in {w}, as if it paid the rent.", "猫{g}走了进来，好像房租是它付的。"),
+            ("She nodded {w}. The coffee did not.", "她{g}点了头。咖啡没有。"),
+            ("He apologised {w}, still holding the invoice.", "他{g}道了歉，手里还拿着发票。"),
+        ]
     else:
-        office = choose(word, 1, [
-            "We need to sort out the {w} today.",
-            "Who is looking after the {w}?",
-            "The {w} came up in this morning's meeting.",
-            "There is still no decision on the {w}.",
-            "I left a note about the {w}.",
-        ]).format(w=word)
-        daily = choose(word, 2, [
-            "I was still thinking about the {w} on the bus home.",
-            "She explained the {w} in ordinary words.",
-            "We talked about the {w} after dinner.",
-            "He called me about the {w} while I was cooking.",
-            "The {w} can wait until tomorrow.",
-        ]).format(w=word)
-        funny = choose(word, 3, [
-            "Everyone avoided the {w}, so it stayed on the agenda all week.",
-            "I tried to forget the {w}. It was waiting in my inbox.",
-            "The {w} has been 'nearly finished' since Monday.",
-            "We blamed the {w}. The {w} did not attend the meeting.",
-            "The cat sat on the papers and guarded the {w}.",
-        ]).format(w=word)
-        office_zh = f"今天得把{gloss}这件事理清楚。"
-        daily_zh = f"回家的路上我还在想{gloss}。"
-        funny_zh = f"大家都躲着{gloss}，所以它在议程上待了一整周。"
-    rows = [
-        {"k": "办公", "en": office, "zh": office_zh},
-        {"k": "日常", "en": daily, "zh": daily_zh},
-        {"k": "搞笑", "en": funny, "zh": funny_zh},
+        office_pairs = [
+            ("Can we talk about {w} before lunch?", "午饭前我们能谈谈{g}吗？"),
+            ("I left a note about {w} on your desk.", "我在你桌上留了张关于{g}的条子。"),
+            ("{W} is still on my list for today.", "{g}还在我今天的单子上。"),
+        ]
+        daily_pairs = [
+            ("I was still thinking about {w} on the way home.", "回家的路上我还在想{g}。"),
+            ("She mentioned {w} while we were eating.", "吃饭的时候她提起了{g}。"),
+            ("We can leave {w} until tomorrow.", "我们可以把{g}留到明天。"),
+        ]
+        funny_pairs = [
+            ("I tried to forget about {w}. My inbox would not let me.", "我想忘掉{g}。收件箱不让。"),
+            ("The cat sat on the only note about {w}.", "猫坐在唯一那张关于{g}的条子上。"),
+            ("Everyone nodded about {w}, then changed the subject.", "大家就{g}点了点头，然后换了话题。"),
+        ]
+    office = fill_pair(*choose(word, 1, office_pairs), word, gloss, verb)
+    daily = fill_pair(*choose(word, 2, daily_pairs), word, gloss, verb)
+    funny = fill_pair(*choose(word, 3, funny_pairs), word, gloss, verb)
+    return [
+        {"k": "办公", **office},
+        {"k": "日常", **daily},
+        {"k": "搞笑", **funny},
     ]
-    if entry.get("ex"):
-        rows.insert(0, {"k": "商务", "en": entry["ex"], "zh": f"商务例句，关键词是{gloss}。"})
-    return rows[:4]
 
 
 def root_sentence(word: str, root: dict) -> str:
@@ -838,6 +915,7 @@ def main():
             entry["zh"] = "（词表收录；简明释义待补）"
 
     germanic = {word.lower() for word in GERMANIC}
+    more_germanic = {word.lower() for word in MORE_GERMANIC}
     for key, entry in words.items():
         hand = ETYM.get(key)
         if hand:
@@ -859,11 +937,26 @@ def main():
             entry["et"] = root_sentence(entry["w"], root)
             entry["ek"] = "root"
             continue
+        loan = MORE_ETYM.get(key)
+        if loan:
+            entry["et"] = loan
+            entry["ek"] = "traced"
+            continue
+        kind_note = EXTRA_KIND.get(key)
+        if kind_note:
+            entry["ek"], entry["et"] = kind_note
+            continue
         if key in germanic:
             entry["et"] = (
                 f"{entry['w']} 是英语的日耳曼本族词，来自古英语这一支，不是从拉丁语或希腊语借来的。"
                 "商务英语里，句子的骨架（冠词、代词、介词、助动词）大多是这类词；"
                 "拉丁语和希腊语更多出现在合同、财务和抽象概念里。"
+            )
+            entry["ek"] = "germanic"
+            continue
+        if key in more_germanic:
+            entry["et"] = (
+                f"{entry['w']} 是英语里的日耳曼本族词，不是从拉丁语或希腊语整词借来的。"
             )
             entry["ek"] = "germanic"
             continue
@@ -879,6 +972,13 @@ def main():
         if entry["lg"] and entry["lg"] not in legend_by_id:
             entry["lg"] = ""
         entry["xs"] = example_sentences(entry)
+        for row in entry["xs"]:
+            rel = line_audio_rel(row["en"])
+            audio_file = ROOT / "docs" / rel
+            if audio_file.exists() and audio_file.stat().st_size > 500:
+                row["au"] = rel
+            else:
+                row.pop("au", None)
         pic_name = surface_word(entry["w"]).lower().replace(" ", "-")
         entry.pop("pic", None)
         for ext in (".png", ".jpg"):
@@ -912,7 +1012,13 @@ def main():
     scenes = []
     for scene in SCENES:
         kept = [word for word in scene["words"] if word.lower() in known]
-        scenes.append({**scene, "words": kept})
+        scene_copy = {**scene, "words": kept, "lines": [dict(line) for line in scene.get("lines") or []]}
+        for line in scene_copy["lines"]:
+            rel = line_audio_rel(line.get("en") or "")
+            audio_file = ROOT / "docs" / rel
+            if line.get("en") and audio_file.exists() and audio_file.stat().st_size > 500:
+                line["au"] = rel
+        scenes.append(scene_copy)
 
     ordered = sorted(words.values(), key=lambda item: item["w"].lower())
     counts = {
