@@ -474,6 +474,111 @@ HAND_XS = {
         {"k": "日常", "en": "Our family agenda was: eat, walk, sleep.", "zh": "我们家的议程是：吃、走、睡。"},
         {"k": "搞笑", "en": "Item one on the agenda was finding the agenda.", "zh": "议程第一项是把议程找出来。"},
     ],
+    "conference": [
+        {"k": "办公", "en": "The conference starts at nine. Please sit near the door.", "zh": "会议九点开始。请坐得靠门一点。"},
+        {"k": "日常", "en": "We watched the game, then argued as if it were a conference.", "zh": "我们看完比赛，然后吵得像在开会。"},
+        {"k": "搞笑", "en": "The conference had a dress code. The cat wore a tie.", "zh": "会议有着装要求。猫打了领带。"},
+    ],
+    "chair": [
+        {"k": "办公", "en": "Please chair the meeting. I will take the minutes.", "zh": "请你主持会议。我来做记录。"},
+        {"k": "日常", "en": "I bought a new chair and had nowhere to put the old one.", "zh": "我买了新椅子，旧的没地方放。"},
+        {"k": "搞笑", "en": "She was asked to chair the meeting. She sat on the table.", "zh": "大家请她主持。她坐到了桌子上。"},
+    ],
+    "airport": [
+        {"k": "办公", "en": "The client will meet you at the airport, not at the hotel.", "zh": "客户会在机场见你，不是在酒店。"},
+        {"k": "日常", "en": "We reached the airport and remembered the tickets were at home.", "zh": "到了机场才想起票在家里。"},
+        {"k": "搞笑", "en": "The airport called our flight. Our flight did not answer.", "zh": "机场呼叫我们的航班。航班没接。"},
+    ],
+    "bill": [
+        {"k": "办公", "en": "Please check the bill before you pay it.", "zh": "付款前请先核对账单。"},
+        {"k": "日常", "en": "The electricity bill arrived on a Sunday.", "zh": "电费账单星期天到了。"},
+        {"k": "搞笑", "en": "The bill was longer than the meal.", "zh": "账单比那顿饭还长。"},
+    ],
+    "quote": [
+        {"k": "办公", "en": "Can you quote a price before Friday?", "zh": "周五之前能报价吗？"},
+        {"k": "日常", "en": "I quoted my mother. She said I had the words wrong.", "zh": "我引用了我妈的话。她说我引用错了。"},
+        {"k": "搞笑", "en": "He quoted a very low price, then quoted a second one.", "zh": "他报了一个很低的价，然后又报了第二个。"},
+    ],
+    "business": [
+        {"k": "办公", "en": "Business was quiet in August.", "zh": "八月的生意很清淡。"},
+        {"k": "日常", "en": "She talked business all through lunch.", "zh": "午饭从头到尾她都在谈生意。"},
+        {"k": "搞笑", "en": "We opened a business. The cat became head of complaints.", "zh": "我们开了家公司。猫成了投诉部主管。"},
+    ],
+    "law": [
+        {"k": "办公", "en": "The contract has to follow the law.", "zh": "合同得符合法律。"},
+        {"k": "日常", "en": "He explains the law better after coffee.", "zh": "喝完咖啡，他把法律讲得更清楚。"},
+        {"k": "搞笑", "en": "The law was clear. Our excuse was creative.", "zh": "法律很清楚。我们的借口很有创意。"},
+    ],
+    "visa": [
+        {"k": "办公", "en": "The visa arrived the day before the flight.", "zh": "签证在航班前一天到了。"},
+        {"k": "日常", "en": "I checked the visa twice, then checked it again on the train.", "zh": "签证我查了两遍，上了火车又查一遍。"},
+        {"k": "搞笑", "en": "The visa was ready. The passport was in another city.", "zh": "签证好了。护照在另一座城市。"},
+    ],
+    "payroll": [
+        {"k": "办公", "en": "Payroll goes out on the last Friday.", "zh": "工资在最后一个周五发。"},
+        {"k": "日常", "en": "We said we would not discuss payroll at dinner. We failed.", "zh": "我们说晚饭不谈工资。没做到。"},
+        {"k": "搞笑", "en": "Payroll was late. The cat still expected lunch.", "zh": "工资晚了。猫仍然等着午饭。"},
+    ],
+    "team": [
+        {"k": "办公", "en": "The team meets at half past eight.", "zh": "团队八点半开会。"},
+        {"k": "日常", "en": "Our family team lost at cards.", "zh": "我们家这个队打牌输了。"},
+        {"k": "搞笑", "en": "The team had five people and six opinions.", "zh": "团队五个人，六种意见。"},
+    ],
+    "project": [
+        {"k": "办公", "en": "The project needs one more week.", "zh": "这个项目还要一周。"},
+        {"k": "日常", "en": "I called washing the windows a project.", "zh": "我把擦玻璃叫成一个项目。"},
+        {"k": "搞笑", "en": "The project plan was perfect. Nobody started.", "zh": "项目计划完美。没有人开工。"},
+    ],
+    "value": [
+        {"k": "办公", "en": "The value of the stock fell on Monday.", "zh": "周一股价跌了。"},
+        {"k": "日常", "en": "We argued about the value of a second coffee.", "zh": "我们争论第二杯咖啡值不值。"},
+        {"k": "搞笑", "en": "The report said high value. The coffee disagreed.", "zh": "报告写着价值很高。咖啡并不同意。"},
+    ],
+    "net": [
+        {"k": "办公", "en": "The net price does not include tax.", "zh": "净价不含税。"},
+        {"k": "日常", "en": "I caught three apples in a shopping net.", "zh": "我用购物袋网兜装了三个苹果。"},
+        {"k": "搞笑", "en": "Please send the net figure. He sent a picture of a fishing net.", "zh": "请把净额发来。他发来一张渔网的照片。"},
+    ],
+    "fair": [
+        {"k": "办公", "en": "We will see you at the trade fair in March.", "zh": "三月的交易会上见。"},
+        {"k": "日常", "en": "The fair was crowded, and the apples were cheap.", "zh": "集市很挤，苹果很便宜。"},
+        {"k": "搞笑", "en": "The trade fair gave me a bag, three pens, and no customers.", "zh": "交易会给了我一个袋子、三支笔，没有客户。"},
+    ],
+    "minute": [
+        {"k": "办公", "en": "Please send the minutes before the end of the day.", "zh": "请在今天下班前把会议记录发来。"},
+        {"k": "日常", "en": "Give me a minute. I am looking for the house key.", "zh": "等我一分钟。我在找家门钥匙。"},
+        {"k": "搞笑", "en": "The minutes were short. The meeting was not.", "zh": "会议记录很短。会议本身不短。"},
+    ],
+    "career": [
+        {"k": "办公", "en": "She left the firm to change her career.", "zh": "她离开公司，是为了换一条职业路。"},
+        {"k": "日常", "en": "My uncle still calls cooking a career.", "zh": "我舅舅仍然把做饭叫成一项事业。"},
+        {"k": "搞笑", "en": "His career plan was one page. The doubts took three.", "zh": "职业计划只有一页。犹豫写了三页。"},
+    ],
+    "charge": [
+        {"k": "办公", "en": "There is no delivery charge on this order.", "zh": "这张订单不收运费。"},
+        {"k": "日常", "en": "Who is in charge of feeding the cat?", "zh": "谁负责喂猫？"},
+        {"k": "搞笑", "en": "They charged me for water. The water was free on the sign.", "zh": "他们收了我的水钱。牌子上写着水是免费的。"},
+    ],
+    "firm": [
+        {"k": "办公", "en": "The firm will reply by Thursday.", "zh": "公司周四前回复。"},
+        {"k": "日常", "en": "Be firm. The child has already had two biscuits.", "zh": "坚定一点。这孩子已经吃了两块饼干。"},
+        {"k": "搞笑", "en": "The firm has a mission statement. The cat has the desk.", "zh": "公司有使命宣言。猫占着桌子。"},
+    ],
+    "board": [
+        {"k": "办公", "en": "The board meets on the first Monday.", "zh": "董事会在第一个星期一开会。"},
+        {"k": "日常", "en": "I carried the board up the stairs by myself.", "zh": "我自己把木板扛上了楼。"},
+        {"k": "搞笑", "en": "The board approved the plan. Nobody could find a pen.", "zh": "董事会通过了计划。没有人找得到笔。"},
+    ],
+    "data": [
+        {"k": "办公", "en": "The data arrived, but the labels were missing.", "zh": "数据到了，标签没到。"},
+        {"k": "日常", "en": "I keep the family data in one notebook.", "zh": "家里的数据我记在一个本子上。"},
+        {"k": "搞笑", "en": "The data was confidential. Someone had left it on the train.", "zh": "数据是保密的。有人把它落在火车上了。"},
+    ],
+    "scale": [
+        {"k": "办公", "en": "We cannot raise salaries on this scale.", "zh": "按这个级别，工资加不了。"},
+        {"k": "日常", "en": "I stood on the scale and then had a biscuit.", "zh": "我站上秤，然后吃了块饼干。"},
+        {"k": "搞笑", "en": "The pay scale was fair. The biscuit scale was not.", "zh": "工资等级很公平。饼干的秤并不公平。"},
+    ],
 }
 
 

@@ -64,4 +64,25 @@ PAIRS = [
         "right": "contract",
         "note": "只差一个字母。contact 是拉丁语 tangere「触摸」，碰到一起。contract 是拉丁语 trahere「拉」，把双方拉到同一张契约上。",
     },
+    {
+        "id": "law-legal",
+        "title": "law / legal",
+        "left": "law",
+        "right": "legal",
+        "note": "都和法有关。law 来自古诺斯语，是日耳曼词。legal 来自拉丁语 lex「法」。句子里可以同时出现：The contract is legal under Chinese law.",
+    },
+    {
+        "id": "worth-value",
+        "title": "worth / value",
+        "left": "worth",
+        "right": "value",
+        "note": "都是价值。worth 是日耳曼词。value 来自拉丁语 valere「值钱」。worth 常放在 be 后面，value 更能作名词和动词。",
+    },
+    {
+        "id": "wholesale-retail",
+        "title": "wholesale / retail",
+        "left": "wholesale",
+        "right": "retail",
+        "note": "批发和零售。wholesale 是日耳曼词 whole「整」加上 sale「卖」。retail 来自古法语「切成小块」，是一小份一小份地卖。",
+    },
 ]
